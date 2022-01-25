@@ -11,7 +11,7 @@ def get_ue_td_html(page: requests.Response = None) -> list[bs4.element.Tag]:
     return get_ue_table_html(page).findChildren('tr', recursive=False)
 
 
-def get_letters(page: requests.Response) -> dict[str, list[str, str, str]]:
+def extract_letters(page: requests.Response) -> dict[str, list[str, str, str]]:
     content = get_ue_td_html(page)[1::2]
     dossier_dict = dict()
     for semester in content:

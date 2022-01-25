@@ -1,5 +1,4 @@
-.gitignore
-/main - Copie.py
-/multi_turn.py
+*.gitignore
 /page.py
 /confidential.py
+/testing/

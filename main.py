@@ -1,4 +1,4 @@
-from ent_requests import set_cipher
+from website_interact.ent_requests import set_cipher
 import bot
 
 

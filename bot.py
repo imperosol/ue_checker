@@ -2,9 +2,10 @@ import discord
 import requests
 import asyncio
 from discord.ext import commands
-from ent_requests import init_session, get_student_file
-from html_analysis import get_letters, extract_decisions
+from website_interact.ent_requests import init_session, get_student_file
+from website_interact.html_analysis import extract_letters, extract_decisions
 from confidential import BOT_TOKEN
+from users import User, UserNotFoundError, OverwriteError
 import threading
 
 client = discord.Client()
@@ -20,30 +21,49 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
 
 
-def can_check(ctx: discord.ext.commands.Context, semester: str):
-    if ctx.author.id == '423937066620157953':
-        return True
+async def send_embed_letters(ctx, letters: dict[str, list[str, str, str]], semester) -> None:
+    def get_value(ue_liste):
+        return '\n'.join(
+            [f"- {ue[0]} : {ue[1]} " + (f"({ue[2]} crédits)" if len(ue) == 3 else "")
+             for ue in ue_liste if len(ue) > 1]
+        )
+    embed = discord.Embed(title="Décisions jurys")
+    if semester == 'all':
+        for letter in letters:
+            embed.add_field(name=letter, value=get_value(letters[letter]), inline=False)
+    elif semester == 'last':
+        key = list(letters.keys())[-1]
+        embed.add_field(name=key, value=get_value(letters[key]), inline=False)
+    elif semester not in letters:
+        await ctx.send("Semestre non trouvé")
+        return
     else:
-        return semester in ('last', 'TC1', 'TC2')
+        print(letters[semester])
+        embed.add_field(name=semester, value=get_value(letters[semester]), inline=True)
+    await ctx.send(embed=embed)
 
 
 @bot.command()
-async def test(ctx):
-    if not can_check(ctx, "TC3"):
-        await ctx.send("Pas le droit de consulter")
-        return
+async def get_letters(ctx, semester: str = 'last'):
+    semester = semester.replace(' ', '')
+    bot_user = User(ctx.author.id)
     with requests.Session() as session:
-        await asyncio.gather(
-            ctx.send("Connexion au serveur"),
-            init_session(session)
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.gather(
+                ctx.send("Connexion au serveur"),
+                loop.run_in_executor(None, bot_user.init_session, session)
+            )
+        except UserNotFoundError:
+            await ctx.send("Connexion impossible : utilisateur inexistant dans la base de données\n"
+                           "Enregistrez-vous d'abord avec la commande `!ent_register`")
+            return
+        trash_value, page = await asyncio.gather(
+            ctx.send("Accès au dossier étudiant"),
+            loop.run_in_executor(None, get_student_file, session)
         )
-        threading.Thread(target=asyncio.run, args=[ctx.send("Getting result")]).start()
-        letters = get_letters(get_student_file(session))
-        result = ""
-        for semester in letters:
-            result += semester + " :\n"
-            result += "\n".join([f"\t-{ue[0]} : {ue[1]}" for ue in letters[semester]]) + "\n"
-        await ctx.send(result)
+        letters = extract_letters(page)
+        await send_embed_letters(ctx, letters, semester)
 
 
 async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
@@ -65,17 +85,22 @@ async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
 @bot.command()
 async def get_decision(ctx, semester: str = 'last') -> None:
     semester = semester.replace(' ', '')
-    if not can_check(ctx, semester):
-        await ctx.send("Pas le droit de consulter")
-        return
+    bot_user = User(ctx.author.id)
     with requests.Session() as session:
-        async def init_async(_session):
-            init_session(_session)
-        await asyncio.gather(
-            ctx.send("Connexion au serveur"),
-            init_async(session)
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.gather(
+                ctx.send("Connexion au serveur"),
+                loop.run_in_executor(None, bot_user.init_session, session)
+            )
+        except UserNotFoundError:
+            await ctx.send("Connexion impossible : utilisateur inexistant dans la base de données\n"
+                           "Enregistrez-vous d'abord avec la commande `!ent_register`")
+            return
+        trash_value, page = await asyncio.gather(
+            ctx.send("Accès au dossier étudiant"),
+            loop.run_in_executor(None, get_student_file, session)
         )
-        page = get_student_file(session)
         decisions = extract_decisions(page)
         await send_embed_decision(ctx, decisions, semester)
 
@@ -109,8 +134,33 @@ def watch(ctx, delay):
 
 
 @bot.command()
-async def start_ue_watch(ctx, delay=1):
+async def start_ue_watch(ctx, delay = 1):
     delay = int(delay)
     await ctx.send(f"Début de l'observation du dossier étudiant. Observation toutes les {delay} secondes")
     t = threading.Thread(target=watch, args=(ctx, delay), daemon=True)
     t.start()
+
+
+@bot.command()
+async def ent_register(ctx, username = None, password = None):
+    await ctx.message.delete()
+    if username is None or password is None:
+        ctx.send("Arguments manquants. La bonne syntaxe est : ``!ent_register username password`")
+    user_id = ctx.author.id
+    new_user = User(user_id, username, password)
+    try:
+        new_user.save()
+        await ctx.send("Utilisateur enregistré")
+    except OverwriteError:
+        await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
+                       f"Vous pouvez vous désinscrire avec la commande `!unregister`")
+
+
+@bot.command()
+async def unregister(ctx):
+    try:
+        User(ctx.author.id).remove()
+        await ctx.send("Utilisateur désinscrit")
+    except UserNotFoundError:
+        await ctx.send(f"L'utilisateur {ctx.author.name} n'est pas enregistré\n"
+                       f"Vous pouvez vous inscrire avec la commande `!ent_register`")
