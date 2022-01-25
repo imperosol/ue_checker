@@ -1,4 +1,5 @@
 import sqlite3
+
 from cryptography.fernet import Fernet
 from confidential import FERNET_KEY
 from website_interact.ent_requests import init_session
@@ -7,10 +8,18 @@ from pathlib import Path
 DB_PATH = Path().absolute() / "users.sqlite"
 
 
-class OverwriteError(Exception): pass
+class OverwriteError(Exception):
+    """
+    Error raised when trying to overwrite a user in the database
+    """
+    pass
 
 
-class UserNotFoundError(Exception): pass
+class UserNotFoundError(Exception):
+    """
+    Error raised when a user is not found in the database
+    """
+    pass
 
 
 class User:
@@ -19,7 +28,23 @@ class User:
         self.__password = password
         self.discord_id = discord_id
 
-    def save(self):
+    def save(self) -> None:
+        """
+        method to insert a new user in the database.
+        require to know the password, the username and the discord id.
+        The password is encrypted before being inserted
+
+        A user must have been registered in the database to use the commands
+        to consult his student file
+
+        If the init_session() method has not been called before,
+        a ValueError exception will be raised.
+
+        If the user is already in the database, a OverwriteError
+        error exception will be raised
+        :raise ValueError
+        :raise OverWriteError
+        """
         if self.__username == "" or self.__password == "":
             raise ValueError()
         db = sqlite3.connect(DB_PATH)
@@ -38,7 +63,11 @@ class User:
             db.commit()
             db.close()
 
-    def remove(self):
+    def remove(self) -> None:
+        """
+        Remove the user from the database.
+        If the user is not in the database, a UserNotFoundError will be raised
+        """
         db = sqlite3.connect(DB_PATH)
         cur = db.cursor()
         result = cur.execute("DELETE FROM users WHERE discordId=?", (self.discord_id,))
@@ -64,7 +93,12 @@ class User:
         cur.close()
         db.close()
 
-    def init_session(self, session):
+    def init_session(self, session) -> None:
+        """
+        Initialize the session and login the user
+        :param session: the session to initialize
+        :type session: requests.Session
+        """
         if self.__username == "" or self.__password == "":
             try:
                 self.__find_user_in_db()
