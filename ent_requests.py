@@ -1,4 +1,4 @@
-from confidential import *
+from confidential import USERNAME, PASSWORD
 import requests
 from bs4 import BeautifulSoup
 
@@ -24,17 +24,16 @@ def set_cipher():
 
 
 def __cas_login(session: requests.Session) -> None:
-    page = session.get('https://cas.utt.fr/cas/login?service=https://ent2.utt.fr/uPortal/Login', data=payload)
+    url = 'https://cas.utt.fr/cas/login?service=https://ent2.utt.fr/uPortal/Login'
+    page = session.get(url, data=payload)
     soup = BeautifulSoup(page.text, 'lxml')
     payload['lt'] = soup.find('input', {'name': 'lt'}).get('value')
     cookies = page.cookies
-    url = 'https://cas.utt.fr/cas/login?service=https://ent2.utt.fr/uPortal/Login'
     session.post(url, data=payload, params=cookies, verify=False)
     session.params = cookies
-    print('connected')
 
 
-async def init_session(session: requests.Session, username: str = None, password: str = None) -> None:
+def init_session(session: requests.Session, username: str = None, password: str = None) -> None:
     if username is not None:
         payload['username'] = username
     if password is not None:

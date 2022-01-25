@@ -27,9 +27,6 @@ def can_check(ctx: discord.ext.commands.Context, semester: str):
         return semester in ('last', 'TC1', 'TC2')
 
 
-# def ntm():
-
-
 @bot.command()
 async def test(ctx):
     if not can_check(ctx, "TC3"):
@@ -42,7 +39,6 @@ async def test(ctx):
         )
         threading.Thread(target=asyncio.run, args=[ctx.send("Getting result")]).start()
         letters = get_letters(get_student_file(session))
-        print(letters)
         result = ""
         for semester in letters:
             result += semester + " :\n"
@@ -50,7 +46,7 @@ async def test(ctx):
         await ctx.send(result)
 
 
-async def send_embed_decision(ctx, decisions: dict[str, str], semester):
+async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
     embed = discord.Embed(title="Décisions jurys")
     if semester == 'all':
         for decision in decisions:
@@ -67,32 +63,54 @@ async def send_embed_decision(ctx, decisions: dict[str, str], semester):
 
 
 @bot.command()
-async def get_decision(ctx, semester = 'last'):
+async def get_decision(ctx, semester: str = 'last') -> None:
     semester = semester.replace(' ', '')
     if not can_check(ctx, semester):
         await ctx.send("Pas le droit de consulter")
         return
     with requests.Session() as session:
+        async def init_async(_session):
+            init_session(_session)
         await asyncio.gather(
             ctx.send("Connexion au serveur"),
-            init_session(session)
+            init_async(session)
         )
-        decisions = extract_decisions(get_student_file(session))
+        page = get_student_file(session)
+        decisions = extract_decisions(page)
         await send_embed_decision(ctx, decisions, semester)
 
 
-def watch(delay):
+async def notify_new_decision(ctx, decision):
+    await ctx.send(f"Nouvelle décision :\n{decision}")
+
+
+def watch(ctx, delay):
     exit_flag = threading.Event()
-    while True:
-        while not exit_flag.wait(delay):
-            try:
-                print('yo')
-            except InterruptedError:
-                pass
+    with requests.Session() as session:
+        init_session(session)
+        page = get_student_file(session)
+        decisions = extract_decisions(page)
+        key = list(decisions.keys())[-1]
+        last_decision = decisions[key]
+        while True:
+            while not exit_flag.wait(delay):
+                try:
+                    page = get_student_file(session)
+                    new_decision = extract_decisions(page)[key]
+                    print(new_decision)
+                    if last_decision != new_decision:
+                        last_decision = new_decision
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(notify_new_decision(ctx, new_decision))
+                    loop.close()
+                except InterruptedError:
+                    pass
 
 
 @bot.command()
-async def start_ue_watch(ctx, delay):
+async def start_ue_watch(ctx, delay=1):
+    delay = int(delay)
     await ctx.send(f"Début de l'observation du dossier étudiant. Observation toutes les {delay} secondes")
-    t = threading.Thread(target=watch, args=(1,), daemon=True)
+    t = threading.Thread(target=watch, args=(ctx, delay), daemon=True)
     t.start()
