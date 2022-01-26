@@ -1,4 +1,3 @@
-from confidential import USERNAME, PASSWORD
 import requests
 from bs4 import BeautifulSoup
 
@@ -8,8 +7,6 @@ STUDENT_FILE_URL = 'https://ent2.utt.fr/uPortal/ExternalURLStats?fname=suivi-etu
 payload = {
     '_eventId': 'submit',
     'submit': 'LOGIN',
-    'username': USERNAME,
-    'password': PASSWORD,
 }
 
 
@@ -33,12 +30,10 @@ def __cas_login(session: requests.Session) -> None:
     session.params = cookies
 
 
-def init_session(session: requests.Session, username: str = None, password: str = None) -> None:
-    if username is not None:
-        payload['username'] = username
-    if password is not None:
-        payload['password'] = password
-    session.auth = (payload['username'], payload['password'])
+def init_session(session: requests.Session, username: str, password: str) -> None:
+    payload['username'] = username
+    payload['password'] = password
+    session.auth = (username, password)
     session.verify = False
     session.data = payload
     __cas_login(session)

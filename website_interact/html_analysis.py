@@ -28,8 +28,8 @@ def extract_letters(page: requests.Response) -> dict[str, list[str, str, str]]:
     return dossier_dict
 
 
-def extract_decisions(page: requests.Response, last = False) -> dict[str, str]:
-    if not last:
+def extract_decisions(page: requests.Response, index: int = None) -> dict[str, str]:
+    if index is None:
         content = get_ue_td_html(page)[1::2]
     else:
         content = [get_ue_td_html(page)[-2]]
