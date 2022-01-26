@@ -105,3 +105,13 @@ class User:
             except UserNotFoundError:
                 raise UserNotFoundError()
         init_session(session, self.__username, self.__password)
+
+    def is_registered(self):
+        db = sqlite3.connect(DB_PATH)
+        cur = db.cursor()
+        result = cur.execute("SELECT * FROM users WHERE discordId=?", (self.discord_id,))
+        result = result.fetchone() is not None
+        cur.close()
+        db.commit()
+        db.close()
+        return result

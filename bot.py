@@ -8,7 +8,9 @@ from confidential import BOT_TOKEN
 from users import User, UserNotFoundError, OverwriteError
 import threading
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!')
 
 
@@ -27,6 +29,7 @@ async def send_embed_letters(ctx, letters: dict[str, list[str, str, str]], semes
             [f"- {ue[0]} : {ue[1]} " + (f"({ue[2]} crédits)" if len(ue) == 3 else "")
              for ue in ue_liste if len(ue) > 1]
         )
+
     embed = discord.Embed(title="Décisions jurys")
     if semester == 'all':
         for letter in letters:
@@ -141,19 +144,58 @@ async def start_ue_watch(ctx, delay = 1):
     t.start()
 
 
+# @bot.command()
+# async def ent_register(ctx, username = None, password = None):
+#     await ctx.message.delete()
+# if username is None or password is None:
+#     ctx.send("Arguments manquants. La bonne syntaxe est : ``!ent_register username password`")
+# user_id = ctx.author.id
+# new_user = User(user_id, username, password)
+# try:
+#     new_user.save()
+#     await ctx.send("Utilisateur enregistré")
+# except OverwriteError:
+#     await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
+#                    f"Vous pouvez vous désinscrire avec la commande `!unregister`")
+
+
+async def dm_register(user) -> User | None:
+    ctx = user.dm_channel
+    await ctx.send("Vous avez demandé à vous enregistrer. Vos informations personnelles seront stockées sur une base "
+                   "de données. Votre mot de passe sera crypté avec une clef accessible uniquement par Thomas  Girod, "
+                   "le développeur de ce bot. Ne continuez que si vous lui faites confiance.\n\n Voulez-vous "
+                   "poursuivre ? o/n")
+    answer: discord.Message = await bot.wait_for('message', check=lambda m: isinstance(m.channel, discord.DMChannel))
+    if answer.content.lower() not in 'ouiyes':  # user can answer 'o', 'oui', 'y' or 'yes'
+        await ctx.send("Abandon de l'opération")
+        return None
+    while True:
+        await ctx.send("Donnez votre identifiant sur l'ENT.")
+        username = await bot.wait_for('message', check=lambda m: isinstance(m.channel, discord.DMChannel))
+        username = username.content
+        await ctx.send("Donnez votre mot de passe.")
+        password = await bot.wait_for('message', check=lambda m: isinstance(m.channel, discord.DMChannel))
+        password = password.content
+        await ctx.send("Confirmez-vous vos données d'authentification ? (o/n)")
+        answer = await bot.wait_for('message', check=lambda m: isinstance(m.channel, discord.DMChannel))
+        if answer.content.lower() in 'ouiyes':
+            return User(user.id, username, password)
+
+
 @bot.command()
-async def ent_register(ctx, username = None, password = None):
-    await ctx.message.delete()
-    if username is None or password is None:
-        ctx.send("Arguments manquants. La bonne syntaxe est : ``!ent_register username password`")
-    user_id = ctx.author.id
-    new_user = User(user_id, username, password)
-    try:
-        new_user.save()
-        await ctx.send("Utilisateur enregistré")
-    except OverwriteError:
+async def ent_register(ctx: discord.ext.commands.Context) -> None:
+    new_user = User(ctx.author.id)
+    if new_user.is_registered():
         await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
                        f"Vous pouvez vous désinscrire avec la commande `!unregister`")
+        return
+    if ctx.author.dm_channel is None:
+        await ctx.author.create_dm()
+    new_user = await dm_register(ctx.author)
+    if new_user is not None:
+        new_user.save()
+        await ctx.author.dm_channel.send("Enregistrement confirmé. Vous pouvez vous désinscire à tout moment avec la "
+                                   "commande `!unregister`")
 
 
 @bot.command()
