@@ -100,7 +100,7 @@ async def get_decision(ctx, semester: str = 'last') -> None:
 
 
 @bot.command()
-async def ent_register(ctx: discord.ext.commands.Context) -> None:
+async def register(ctx: discord.ext.commands.Context) -> None:
     new_user = User(ctx.author.id)
     if new_user.is_registered():
         await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
