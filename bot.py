@@ -144,21 +144,6 @@ async def start_ue_watch(ctx, delay = 1):
     t.start()
 
 
-# @bot.command()
-# async def ent_register(ctx, username = None, password = None):
-#     await ctx.message.delete()
-# if username is None or password is None:
-#     ctx.send("Arguments manquants. La bonne syntaxe est : ``!ent_register username password`")
-# user_id = ctx.author.id
-# new_user = User(user_id, username, password)
-# try:
-#     new_user.save()
-#     await ctx.send("Utilisateur enregistré")
-# except OverwriteError:
-#     await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
-#                    f"Vous pouvez vous désinscrire avec la commande `!unregister`")
-
-
 async def dm_register(user) -> User | None:
     ctx = user.dm_channel
     await ctx.send("Vous avez demandé à vous enregistrer. Vos informations personnelles seront stockées sur une base "
