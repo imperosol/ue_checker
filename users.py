@@ -107,11 +107,10 @@ class User:
         init_session(session, self.__username, self.__password)
 
     def is_registered(self):
-        db = sqlite3.connect(DB_PATH)
-        cur = db.cursor()
-        result = cur.execute("SELECT * FROM users WHERE discordId=?", (self.discord_id,))
-        result = result.fetchone() is not None
-        cur.close()
-        db.commit()
-        db.close()
-        return result
+        with sqlite3.connect(DB_PATH) as db:
+            with db.cursor() as cur:
+                result = cur.execute("SELECT discordId FROM users WHERE discordId=?", (self.discord_id,))
+                if result.fetchone() is not None:  # check if there is a row in the query result
+                    return True
+                else:
+                    return False
