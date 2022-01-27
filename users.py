@@ -89,7 +89,6 @@ class User:
             raise UserNotFoundError
         self.__username = result[0]
         self.__password = f.decrypt(result[1]).decode('utf-8')
-        print(self.__password)
         cur.close()
         db.close()
 
@@ -107,10 +106,10 @@ class User:
         init_session(session, self.__username, self.__password)
 
     def is_registered(self):
-        with sqlite3.connect(DB_PATH) as db:
-            with db.cursor() as cur:
-                result = cur.execute("SELECT discordId FROM users WHERE discordId=?", (self.discord_id,))
-                if result.fetchone() is not None:  # check if there is a row in the query result
-                    return True
-                else:
-                    return False
+        db = sqlite3.connect(DB_PATH)
+        cur = db.cursor()
+        result = cur.execute("SELECT discordId FROM users WHERE discordId=?", (self.discord_id,))
+        is_registered = result.fetchone() is not None  # check if there is a row in the query result
+        cur.close()
+        db.close()
+        return is_registered
