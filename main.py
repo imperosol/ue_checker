@@ -1,7 +1,7 @@
 from website_interact.ent_requests import set_cipher
-from discord_bot import bot
+from discord_bot.bot import start_bot
 
 
 if __name__ == '__main__':
     set_cipher()
-    bot.start_bot()
+    start_bot()

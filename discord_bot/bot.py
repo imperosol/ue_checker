@@ -1,12 +1,10 @@
 import discord
 import requests
-import asyncio
 from discord.ext import commands
 
-from discord_bot.aux_functions import send_embed_letters, send_embed_decision, init_session_from_discord, \
-    get_student_file_from_discord, dm_register
-from website_interact.ent_requests import get_student_file
-from website_interact.html_analysis import extract_letters, extract_decisions
+from discord_bot.aux_functions import send_embed_decision, init_session_from_discord, \
+    get_student_file_from_discord, dm_register, send_embed_letters
+from website_interact.html_analysis import extract_letters_category, extract_decisions, extract_letters_semester
 from confidential import BOT_TOKEN
 from users import User, UserNotFoundError
 
@@ -26,34 +24,10 @@ async def on_ready():
 
 
 @bot.command()
-async def get_letters(ctx, semester: str = 'last'):
-    semester = semester.replace(' ', '')
-    bot_user = User(ctx.author.id)
-    with requests.Session() as session:
-        loop = asyncio.get_running_loop()
-        try:
-            await asyncio.gather(
-                ctx.send("Connexion au serveur"),
-                loop.run_in_executor(None, bot_user.init_session, session)
-            )
-        except UserNotFoundError:
-            await ctx.send("Connexion impossible : utilisateur inexistant dans la base de données\n"
-                           "Enregistrez-vous d'abord avec la commande `!ent_register`")
-            return
-        trash_value, page = await asyncio.gather(
-            ctx.send("Accès au dossier étudiant"),
-            loop.run_in_executor(None, get_student_file, session)
-        )
-        letters = extract_letters(page)
-        await send_embed_letters(ctx, letters, semester)
-
-
-@bot.command()
 async def get_decision(ctx, semester: str = 'last') -> None:
     semester = semester.replace(' ', '')
     bot_user = User(ctx.author.id)
     with requests.Session() as session:
-        loop = asyncio.get_running_loop()
         try:
             await init_session_from_discord(ctx, bot_user, session)
         except UserNotFoundError:
@@ -62,7 +36,55 @@ async def get_decision(ctx, semester: str = 'last') -> None:
         decisions = extract_decisions(page)
         await send_embed_decision(ctx, decisions, semester)
 
-#
+
+async def get_letters_semester(ctx, semester = None, categories = None):
+    bot_user = User(ctx.author.id)
+    with requests.Session() as session:
+        try:
+            await init_session_from_discord(ctx, bot_user, session)
+        except UserNotFoundError:
+            return
+        page = await get_student_file_from_discord(ctx, session)
+        letters = extract_letters_semester(page, semester, categories)
+        await send_embed_letters(ctx, letters)
+
+
+async def get_letters_category(ctx, semester = None, categories = None):
+    bot_user = User(ctx.author.id)
+    with requests.Session() as session:
+        try:
+            await init_session_from_discord(ctx, bot_user, session)
+        except UserNotFoundError:
+            return
+        page = await get_student_file_from_discord(ctx, session)
+        letters = extract_letters_category(page, semester, categories)
+        await send_embed_letters(ctx, letters)
+
+
+@bot.command()
+async def get_letters(ctx, *args):
+    if len(args) == 0:  # default behaviour when no argument : all letters of last semester
+        await get_letters_semester(ctx, categories=('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP'))
+        return
+    first_arg = args[0]
+    args = list(set(arg.upper() for arg in args))  # remove eventual duplicates and upper everything
+    categories = set(arg for arg in args if arg in ('CS', 'TM', 'ME', 'EC', 'CT', 'HT', 'ST', 'HP'))
+    if len(categories) == 0 or 'all_cat' in args:
+        categories = ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
+    if 'HT' in categories:  # ues HT are named CT in the ENT
+        categories.remove('HT')
+        categories.add('CT')
+    branches = ['TC', 'ISI', 'RT', 'MTE', 'MM', 'GM', 'GI', 'A2I']
+    if 'all_sem' in args:
+        semesters = branches
+    else:
+        semesters = list(set(arg for arg in args if any(arg.startswith(branch) for branch in branches)))
+    if first_arg in categories or first_arg == 'all_cat':
+        await get_letters_category(ctx, semesters, categories)
+    else:
+        await get_letters_semester(ctx, semesters, categories)
+
+
 # async def notify_new_decision(ctx, decision):
 #     await ctx.send(f"Nouvelle décision :\n{decision}")
 #

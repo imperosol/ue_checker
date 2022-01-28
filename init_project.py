@@ -9,22 +9,15 @@ def __create_database():
         return
     db = sqlite3.connect(DB_PATH)
     cur = db.cursor()
-    query = """
-    create table users
-    (
+    query = """create table users (
         discordId   integer
             constraint users_pk
                 primary key,
         entUsername text not null,
         entPassword text not null
     );
-    
-    create unique index users_entPassword_uindex
-        on users (entPassword);
-    
-    create unique index users_entUsername_uindex
-        on users (entUsername);
-    """
+    create unique index users_entPassword_uindex on users(entPassword);
+    create unique index users_entUsername_uindex on users(entUsername);"""
     cur.executescript(query)
     db.commit()
     cur.close()

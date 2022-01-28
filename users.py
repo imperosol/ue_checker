@@ -67,6 +67,7 @@ class User:
         """
         Remove the user from the database.
         If the user is not in the database, a UserNotFoundError will be raised
+        :raise UserNotFoundError
         """
         db = sqlite3.connect(DB_PATH)
         cur = db.cursor()

