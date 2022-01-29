@@ -1,4 +1,5 @@
 import asyncio
+from typing import Callable
 
 import discord
 import requests
@@ -6,6 +7,7 @@ import requests
 from discord_bot import bot
 from users import UserNotFoundError, User
 from website_interact.ent_requests import get_student_file
+from website_interact.html_analysis import extract_letters_semester, extract_letters_category
 
 
 async def send_embed_letters(ctx, letters: dict[str, dict[str, list[str, str, str]]]) -> None:
@@ -40,7 +42,19 @@ async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
     await ctx.send(embed=embed)
 
 
-async def init_session_from_discord(ctx, bot_user, session):
+async def __init_session_from_discord(ctx, bot_user: User, session: requests.Session) -> None:
+    """
+    Function to initialize the ent session of a user.
+    It works pretty like the init_session() method of the User class, but it provides discord messages
+    throughout the process to inform the user who made the command of the key steps leading to the final result
+
+    :param ctx: the context of the command
+    :param bot_user: the user who made the command. Must not be confused with a discord user. It must be an instance
+    of the custom User class of this project.
+    :param session: the ent session to initialize ; should ideally be wrap into a context manager using the with keyword
+    :raise UserNotFoundError: when the bot_user is not found in the database
+    (probably because he didn't register himself)
+    """
     loop = asyncio.get_running_loop()
     try:
         await asyncio.gather(
@@ -53,7 +67,7 @@ async def init_session_from_discord(ctx, bot_user, session):
         raise UserNotFoundError()
 
 
-async def get_student_file_from_discord(ctx, session) -> requests.Response:
+async def __get_student_file_from_discord(ctx, session) -> requests.Response:
     loop = asyncio.get_running_loop()
     trash_value, page = await asyncio.gather(
         ctx.send("Accès au dossier étudiant"),
@@ -62,18 +76,25 @@ async def get_student_file_from_discord(ctx, session) -> requests.Response:
     return page
 
 
-async def dm_register(user: discord.User) -> User | None:
-    ctx = user.dm_channel
-    await ctx.send("Vous avez demandé à vous enregistrer. Vos informations personnelles seront stockées sur une base "
-                   "de données. Votre mot de passe sera crypté avec une clef accessible uniquement par Thomas  Girod, "
-                   "le développeur de ce bot. Ne continuez que si vous lui faites confiance.\n\n Voulez-vous "
-                   "poursuivre ? o/n")
-    answer: discord.Message = await bot.bot.wait_for('message', check=lambda m: isinstance(m.channel, discord.DMChannel))
-    if answer.content.lower() not in 'ouiyes':  # user can answer 'o', 'oui', 'y' or 'yes'
-        await ctx.send("Abandon de l'opération")
-        return None
+async def get_student_file_page(ctx, bot_user, check_cache = True):
+    if check_cache:
+        page = bot_user.get_cache()
+        if page is not None:
+            return page
+    with requests.Session() as session:
+        try:
+            await __init_session_from_discord(ctx, bot_user, session)
+        except UserNotFoundError:
+            return
+        page = await __get_student_file_from_discord(ctx, session)
+        return page
+
+
+async def __dm_get_confidential_datas(ctx: discord.DMChannel, user: discord.User) -> tuple[str, str]:
+    def check(m):
+        return isinstance(m.channel, discord.DMChannel) and m.author == user
+
     while True:
-        check = lambda m: isinstance(m.channel, discord.DMChannel) and m.author == user
         await ctx.send("Donnez votre identifiant sur l'ENT.")
         username = await bot.bot.wait_for('message', check=check)
         username = username.content
@@ -83,4 +104,34 @@ async def dm_register(user: discord.User) -> User | None:
         await ctx.send("Confirmez-vous vos données d'authentification ? (o/n)")
         answer = await bot.bot.wait_for('message', check=check)
         if answer.content.lower() in 'ouiyes':
-            return User(user.id, username, password)
+            return username, password
+
+
+async def dm_register(user: discord.User) -> User | None:
+    ctx = user.dm_channel
+    await ctx.send("Vous avez demandé à vous enregistrer. Vos informations personnelles seront stockées sur une base "
+                   "de données. Votre mot de passe sera crypté avec une clef accessible uniquement par Thomas  Girod, "
+                   "le développeur de ce bot. Ne continuez que si vous lui faites confiance.\n\n Voulez-vous "
+                   "poursuivre ? o/n")
+    answer: discord.Message = await bot.bot.wait_for('message',
+                                                     check=lambda m: isinstance(m.channel, discord.DMChannel))
+    if answer.content.lower() not in 'ouiyes':  # user can answer 'o', 'oui', 'y' or 'yes'
+        await ctx.send("Abandon de l'opération")
+        return None
+    username, password = await __dm_get_confidential_datas(ctx, user)
+    return User(user.id, username, password)
+
+
+async def __get_letters(ctx, extract_callback: Callable, semester: list | tuple = None, categories = None) -> None:
+    bot_user = User(ctx.author.id)
+    page = await get_student_file_page(ctx, bot_user)
+    letters = extract_callback(page, semester, categories)
+    await send_embed_letters(ctx, letters)
+
+
+async def get_letters_semester(ctx, semester = None, categories = None) -> None:
+    await __get_letters(ctx, extract_letters_semester, semester, categories)
+
+
+async def get_letters_category(ctx, semester = None, categories = None) -> None:
+    await __get_letters(ctx, extract_letters_category, semester, categories)

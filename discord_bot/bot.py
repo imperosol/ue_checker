@@ -1,12 +1,11 @@
 import discord
-import requests
 from discord.ext import commands
 
-from discord_bot.aux_functions import send_embed_decision, init_session_from_discord, \
-    get_student_file_from_discord, dm_register, send_embed_letters
-from website_interact.html_analysis import extract_letters_category, extract_decisions, extract_letters_semester
+from discord_bot.aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
+    get_student_file_page
+from website_interact.html_analysis import extract_decisions
 from confidential import BOT_TOKEN
-from users import User, UserNotFoundError
+from users import User, UserNotFoundError, CacheError
 
 intents = discord.Intents.default()
 intents.members = True
@@ -27,38 +26,9 @@ async def on_ready():
 async def get_decision(ctx, semester: str = 'last') -> None:
     semester = semester.replace(' ', '')
     bot_user = User(ctx.author.id)
-    with requests.Session() as session:
-        try:
-            await init_session_from_discord(ctx, bot_user, session)
-        except UserNotFoundError:
-            return
-        page = await get_student_file_from_discord(ctx, session)
-        decisions = extract_decisions(page)
-        await send_embed_decision(ctx, decisions, semester)
-
-
-async def get_letters_semester(ctx, semester = None, categories = None):
-    bot_user = User(ctx.author.id)
-    with requests.Session() as session:
-        try:
-            await init_session_from_discord(ctx, bot_user, session)
-        except UserNotFoundError:
-            return
-        page = await get_student_file_from_discord(ctx, session)
-        letters = extract_letters_semester(page, semester, categories)
-        await send_embed_letters(ctx, letters)
-
-
-async def get_letters_category(ctx, semester = None, categories = None):
-    bot_user = User(ctx.author.id)
-    with requests.Session() as session:
-        try:
-            await init_session_from_discord(ctx, bot_user, session)
-        except UserNotFoundError:
-            return
-        page = await get_student_file_from_discord(ctx, session)
-        letters = extract_letters_category(page, semester, categories)
-        await send_embed_letters(ctx, letters)
+    page = await get_student_file_page(ctx, bot_user)
+    decisions = extract_decisions(page)
+    await send_embed_decision(ctx, decisions, semester)
 
 
 @bot.command()
@@ -145,3 +115,48 @@ async def unregister(ctx):
     except UserNotFoundError:
         await ctx.send(f"L'utilisateur {ctx.author.name} n'est pas enregistré\n"
                        f"Vous pouvez vous inscrire avec la commande `!ent_register`")
+
+
+async def __is_lifetime_valid(ctx, lifetime):
+    if lifetime <= 0:
+        await ctx.send("Impossible de choisir une valeur négative")
+        return False
+    if lifetime > 10:
+        await ctx.send("Vous n'avez pas le droit de mettre en cache un fichier pendant plus de 10 minutes")
+        return False
+    return True
+
+
+@bot.command()
+async def cache(ctx, lifetime = '5'):
+    if not lifetime.isdigit():
+        return
+    lifetime = int(lifetime)
+    if lifetime > 10:
+        await ctx.send("Vous n'avez pas le droit de mettre en cache un fichier pendant plus de 10 minutes")
+        return
+    bot_user = User(ctx.author.id)
+    page = await get_student_file_page(ctx, bot_user, check_cache=False)
+    bot_user.cache(page, lifetime)
+    await ctx.send(f'Dossier étudiant mis en cache pour une durée de {lifetime} minutes')
+
+
+@bot.command()
+async def set_cache_life(ctx, lifetime = '0'):
+    if not lifetime.isdigit():
+        return
+    lifetime = int(lifetime)
+    if not __is_lifetime_valid(ctx, lifetime):
+        return
+    bot_user = User(ctx.author.id)
+    try:
+        bot_user.set_cache_lifetime(lifetime)
+        await ctx.send(f"Durée de maintien en cache modifiée. Nouvelle durée : {lifetime} minutes")
+    except CacheError:
+        await ctx.send("Vous n'avez pas de fichier en cache")
+
+
+@bot.command()
+async def del_cache(ctx):
+    User(ctx.author.id).delete_cache()
+    await ctx.send("Fichiers en cache supprimés")

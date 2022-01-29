@@ -4,21 +4,23 @@ from cryptography.fernet import Fernet
 from confidential import FERNET_KEY
 from website_interact.ent_requests import init_session
 from pathlib import Path
+from cache import put_in_cache, get_cache, _get_cache_wrapper
 
 DB_PATH = Path().absolute() / "users.sqlite"
 
 
 class OverwriteError(Exception):
-    """
-    Error raised when trying to overwrite a user in the database
-    """
+    """Error raised when trying to overwrite a user in the database"""
     pass
 
 
 class UserNotFoundError(Exception):
-    """
-    Error raised when a user is not found in the database
-    """
+    """Error raised when a user is not found in the database"""
+    pass
+
+
+class CacheError(Exception):
+    """Error raised when making unauthorized operations on the user cache"""
     pass
 
 
@@ -114,3 +116,21 @@ class User:
         cur.close()
         db.close()
         return is_registered
+
+    def cache(self, page, lifetime):
+        put_in_cache(page, self, lifetime)
+
+    def get_cache(self):
+        return get_cache(self)
+
+    def set_cache_lifetime(self, new_lifetime):
+        user_cache = _get_cache_wrapper(self)
+        if user_cache is None:
+            raise CacheError()
+        user_cache.new_lifetime(new_lifetime)
+
+    def delete_cache(self):
+        user_cache = _get_cache_wrapper(self)
+        if user_cache is None:
+            raise CacheError()
+        user_cache.die()

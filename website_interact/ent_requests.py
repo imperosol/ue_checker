@@ -41,3 +41,4 @@ def init_session(session: requests.Session, username: str, password: str) -> Non
 
 def get_student_file(session: requests.Session):
     return session.get(STUDENT_FILE_URL)
+
