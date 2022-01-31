@@ -1,9 +1,13 @@
+import os
+import time
+
 import discord
 from discord.ext import commands
 
+import export
 from discord_bot.aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
-    get_student_file_page
-from website_interact.html_analysis import extract_decisions
+    get_student_file_page, letters_parse_args
+from website_interact.html_analysis import extract_decisions, extract_letters_semester
 from confidential import BOT_TOKEN
 from users import User, UserNotFoundError, CacheError
 
@@ -33,62 +37,11 @@ async def get_decision(ctx, semester: str = 'last') -> None:
 
 @bot.command()
 async def get_letters(ctx, *args):
-    if len(args) == 0:  # default behaviour when no argument : all letters of last semester
-        await get_letters_semester(ctx, categories=('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP'))
-        return
-    first_arg = args[0]
-    args = list(set(arg.upper() for arg in args))  # remove eventual duplicates and upper everything
-    categories = set(arg for arg in args if arg in ('CS', 'TM', 'ME', 'EC', 'CT', 'HT', 'ST', 'HP'))
-    if len(categories) == 0 or 'all_cat' in args:
-        categories = ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
-    if 'HT' in categories:  # ues HT are named CT in the ENT
-        categories.remove('HT')
-        categories.add('CT')
-    branches = ['TC', 'ISI', 'RT', 'MTE', 'MM', 'GM', 'GI', 'A2I']
-    if 'all_sem' in args:
-        semesters = branches
-    else:
-        semesters = list(set(arg for arg in args if any(arg.startswith(branch) for branch in branches)))
+    first_arg, semesters, categories = letters_parse_args(args)
     if first_arg in categories or first_arg == 'all_cat':
         await get_letters_category(ctx, semesters, categories)
     else:
         await get_letters_semester(ctx, semesters, categories)
-
-
-# async def notify_new_decision(ctx, decision):
-#     await ctx.send(f"Nouvelle décision :\n{decision}")
-#
-#
-# def watch(ctx, delay):
-#     exit_flag = threading.Event()
-#     with requests.Session() as session:
-#         init_session(session)
-#         page = get_student_file(session)
-#         decisions = extract_decisions(page)
-#         key = list(decisions.keys())[-1]
-#         last_decision = decisions[key]
-#         while True:
-#             while not exit_flag.wait(delay):
-#                 try:
-#                     page = get_student_file(session)
-#                     new_decision = extract_decisions(page)[key]
-#                     print(new_decision)
-#                     if last_decision != new_decision:
-#                         last_decision = new_decision
-#                     loop = asyncio.new_event_loop()
-#                     asyncio.set_event_loop(loop)
-#                     loop.run_until_complete(notify_new_decision(ctx, new_decision))
-#                     loop.close()
-#                 except InterruptedError:
-#                     pass
-#
-#
-# @bot.command()
-# async def start_ue_watch(ctx, delay = 1):
-#     delay = int(delay)
-#     await ctx.send(f"Début de l'observation du dossier étudiant. Observation toutes les {delay} secondes")
-#     t = threading.Thread(target=watch, args=(ctx, delay), daemon=True)
-#     t.start()
 
 
 @bot.command()
@@ -160,3 +113,19 @@ async def set_cache_life(ctx, lifetime = '0'):
 async def del_cache(ctx):
     User(ctx.author.id).delete_cache()
     await ctx.send("Fichiers en cache supprimés")
+
+
+@bot.command(name='export')
+async def __export(ctx, file_format = "", *args):
+    if file_format not in ('xls', 'json',):
+        await ctx.send("Vous devez spécifier un format de fichier.\n"
+                       "Formats disponibles : xls, json")
+        return
+    bot_user = User(ctx.author.id)
+    _, semesters, categories = letters_parse_args(args)
+    page = await get_student_file_page(ctx, bot_user)
+    ues = extract_letters_semester(page, semesters, categories)
+    export_method = getattr(export, f"to_{file_format}")  # functions are named to_xls, to_json...
+    export_file = export_method(ues)
+    await ctx.send(file=discord.File(export_file))
+    os.remove(export_file)

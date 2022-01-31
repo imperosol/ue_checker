@@ -1,5 +1,7 @@
 *.gitignore
+*.csv
 /page.py
 /confidential.py
 /testing/
 /users.sqlite
+/ues.csv

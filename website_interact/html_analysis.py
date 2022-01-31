@@ -1,12 +1,7 @@
-from typing import Tuple, List, Any
-
 import bs4
-import requests
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-
-ue_set = dict[str, dict[str, list[str, str, str]]]
-response = requests.Response
+from custom_types import response, ue_set
 
 
 def get_ue_table_html(page: response) -> bs4.element.Tag:
@@ -17,8 +12,9 @@ def get_ue_td_html(page: response = None) -> list[bs4.element.Tag]:
     return get_ue_table_html(page).findChildren('tr', recursive=False)
 
 
-def __prepare_extraction(page, semesters) -> tuple[list[str], list[Tag]]:
-    content = get_ue_td_html(page)
+def __prepare_extraction(content: response | list[Tag], semesters) -> tuple[list[str], list[Tag]]:
+    if type(content) == response:
+        content = get_ue_td_html(content)
     categories = content[0].find_all('th', class_='entete-haut ent-categ')
     categories = [c.string for c in categories]
     ues = content[1::2]
@@ -27,7 +23,7 @@ def __prepare_extraction(page, semesters) -> tuple[list[str], list[Tag]]:
     return categories, ues
 
 
-def extract_letters_category(page: response, semesters_list: list[str], categories_list: list[str]) -> ue_set:
+def extract_letters_category(page: list[Tag], semesters_list: list[str], categories_list: list[str]) -> ue_set:
     categories, ues = __prepare_extraction(page, semesters_list)
     dossier_dict = dict()
     for category in categories_list:
@@ -47,7 +43,7 @@ def extract_letters_category(page: response, semesters_list: list[str], categori
     return dossier_dict
 
 
-def extract_letters_semester(page: requests.Response, semesters_list, categories_list) -> ue_set:
+def extract_letters_semester(page: list[Tag], semesters_list, categories_list) -> ue_set:
     """
     extract from the page a dict with all UEs.
     The keys are the semesters and each element is a dict associating UEs to their category
@@ -64,7 +60,7 @@ def extract_letters_semester(page: requests.Response, semesters_list, categories
     dossier_dict = dict()
     for semester in ues:
         name: str = semester.find('td', class_="entete-haut sem").find('span').get_text().strip().replace(' ', '')
-        if semesters_list is not None and name not in semesters_list:
+        if semesters_list is not None and name not in semesters_list and 'all_sem' not in semesters_list:
             continue
         results = [c.find_all('td', {"class": ""}) for c in semester.find_all('table')]  # ues names have no class
         results = [[item.get_text().split() for item in sublist] for sublist in results]  # flatten and clean list
@@ -80,11 +76,11 @@ def extract_letters_semester(page: requests.Response, semesters_list, categories
     return dossier_dict
 
 
-def extract_decisions(page: requests.Response, index: int = None) -> dict[str, str]:
+def extract_decisions(page: list[Tag], index: int = None) -> dict[str, str]:
     if index is None:
-        content = get_ue_td_html(page)[1::2]
+        content = page[1::2]
     else:
-        content = [get_ue_td_html(page)[-2]]
+        content = [page[-2]]
     dossier_dict = dict()
     for semester in content:
         name: str = semester.find('td', class_="entete-haut sem").find('span').get_text().replace(' ', '')

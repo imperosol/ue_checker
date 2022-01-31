@@ -1,12 +1,15 @@
+import sys
 import threading
-
-import requests
+from custom_types import response
 
 # TODO replace the current organization based on a list by an organization based on a dict (would be more efficient)
 __caches = []
 
 
 class __Elem:
+    """ Wrapper for an element in the cache, containing the element in cache, the id of the owner
+     of this element and a Timer object which trigger the removal of the element from the cache when over """
+
     def __init__(self, page, owner, lifetime):
         self.page = page
         self.owner = owner
@@ -33,16 +36,14 @@ def put_in_cache(session, owner, lifetime: int = 5):
 
 def _remove(to_remove) -> None:
     to_remove.life.cancel()
-    print(__caches)
     __caches.remove(to_remove)
-    print(__caches)
 
 
 def has_cache(user) -> bool:
     return any(user.discord_id == elem.owner.discord_id for elem in __caches)
 
 
-def get_cache(user) -> requests.Response:
+def get_cache(user) -> response:
     return next((elem.page for elem in __caches if user.discord_id == elem.owner.discord_id), None)
 
 

@@ -5,6 +5,7 @@ from confidential import FERNET_KEY
 from website_interact.ent_requests import init_session
 from pathlib import Path
 from cache import put_in_cache, get_cache, _get_cache_wrapper
+from custom_types import response
 
 DB_PATH = Path().absolute() / "users.sqlite"
 
@@ -108,7 +109,10 @@ class User:
                 raise UserNotFoundError()
         init_session(session, self.__username, self.__password)
 
-    def is_registered(self):
+    def is_registered(self) -> bool:
+        """Check if this user has been registered in the database (with the !register command)
+        :return: True if the user is registered, else Fale
+        """
         db = sqlite3.connect(DB_PATH)
         cur = db.cursor()
         result = cur.execute("SELECT discordId FROM users WHERE discordId=?", (self.discord_id,))
@@ -117,19 +121,19 @@ class User:
         db.close()
         return is_registered
 
-    def cache(self, page, lifetime):
+    def cache(self, page: response, lifetime: int) -> None:
         put_in_cache(page, self, lifetime)
 
-    def get_cache(self):
+    def get_cache(self) -> response:
         return get_cache(self)
 
-    def set_cache_lifetime(self, new_lifetime):
+    def set_cache_lifetime(self, new_lifetime) -> None:
         user_cache = _get_cache_wrapper(self)
         if user_cache is None:
             raise CacheError()
         user_cache.new_lifetime(new_lifetime)
 
-    def delete_cache(self):
+    def delete_cache(self) -> None:
         user_cache = _get_cache_wrapper(self)
         if user_cache is None:
             raise CacheError()

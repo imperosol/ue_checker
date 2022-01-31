@@ -4,13 +4,15 @@ from typing import Callable
 import discord
 import requests
 
+from website_interact.html_analysis import get_ue_td_html
 from discord_bot import bot
 from users import UserNotFoundError, User
 from website_interact.ent_requests import get_student_file
 from website_interact.html_analysis import extract_letters_semester, extract_letters_category
+from custom_types import ue_set
 
 
-async def send_embed_letters(ctx, letters: dict[str, dict[str, list[str, str, str]]]) -> None:
+async def send_embed_letters(ctx, letters: ue_set) -> None:
     embed = discord.Embed(title="Résultats UE")
     for field in letters:
         result = ""
@@ -67,7 +69,7 @@ async def __init_session_from_discord(ctx, bot_user: User, session: requests.Ses
         raise UserNotFoundError()
 
 
-async def __get_student_file_from_discord(ctx, session) -> requests.Response:
+async def __get_student_file_from_discord(ctx, session: requests.Session) -> requests.Response:
     loop = asyncio.get_running_loop()
     trash_value, page = await asyncio.gather(
         ctx.send("Accès au dossier étudiant"),
@@ -76,7 +78,7 @@ async def __get_student_file_from_discord(ctx, session) -> requests.Response:
     return page
 
 
-async def get_student_file_page(ctx, bot_user, check_cache = True):
+async def get_student_file_page(ctx, bot_user: User, check_cache = True):
     if check_cache:
         page = bot_user.get_cache()
         if page is not None:
@@ -87,6 +89,7 @@ async def get_student_file_page(ctx, bot_user, check_cache = True):
         except UserNotFoundError:
             return
         page = await __get_student_file_from_discord(ctx, session)
+        page = get_ue_td_html(page)
         return page
 
 
@@ -135,3 +138,24 @@ async def get_letters_semester(ctx, semester = None, categories = None) -> None:
 
 async def get_letters_category(ctx, semester = None, categories = None) -> None:
     await __get_letters(ctx, extract_letters_category, semester, categories)
+
+
+def letters_parse_args(args: tuple | list) -> tuple[str | None, tuple | None, tuple]:
+    if len(args) == 0:  # default behaviour when no argument : all letters of last semester
+        return None, None, ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
+    first_arg = args[0]
+    if first_arg.startswith('all'):
+        first_arg = first_arg.lower()
+    args = list(set(arg.upper() for arg in args))  # remove eventual duplicates and upper everything
+    categories = set(arg for arg in args if arg in ('CS', 'TM', 'ME', 'EC', 'CT', 'HT', 'ST', 'HP'))
+    if len(categories) == 0 or 'ALL_CAT' in args:
+        categories = ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
+    elif 'HT' in categories:  # ues HT are named CT in the ENT
+        categories.remove('HT')
+        categories.add('CT')
+    categories = tuple(categories)
+    if 'ALL_SEM' in args:
+        return first_arg, ('all_sem',), categories
+    branches = ('TC', 'ISI', 'RT', 'MTE', 'MM', 'GM', 'GI', 'A2I')
+    semesters = tuple(set(arg for arg in args if any(arg.startswith(branch) for branch in branches)))
+    return first_arg, semesters, categories
