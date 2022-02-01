@@ -1,6 +1,4 @@
 import os
-import time
-
 import discord
 from discord.ext import commands
 
@@ -117,9 +115,9 @@ async def del_cache(ctx):
 
 @bot.command(name='export')
 async def __export(ctx, file_format = "", *args):
-    if file_format not in ('xls', 'json',):
+    if file_format not in ('xls', 'json', 'latex', 'tex'):
         await ctx.send("Vous devez spécifier un format de fichier.\n"
-                       "Formats disponibles : xls, json")
+                       "Formats disponibles : xls, json, latex")
         return
     bot_user = User(ctx.author.id)
     _, semesters, categories = letters_parse_args(args)

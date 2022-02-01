@@ -46,8 +46,8 @@ async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
 
 async def __init_session_from_discord(ctx, bot_user: User, session: requests.Session) -> None:
     """
-    Function to initialize the ent session of a user.
-    It works pretty like the init_session() method of the User class, but it provides discord messages
+    initialize the ent session of a user.
+    Work pretty like the init_session() method of the User class, but provide discord messages
     throughout the process to inform the user who made the command of the key steps leading to the final result
 
     :param ctx: the context of the command
@@ -140,22 +140,30 @@ async def get_letters_category(ctx, semester = None, categories = None) -> None:
     await __get_letters(ctx, extract_letters_category, semester, categories)
 
 
-def letters_parse_args(args: tuple | list) -> tuple[str | None, tuple | None, tuple]:
-    if len(args) == 0:  # default behaviour when no argument : all letters of last semester
-        return None, None, ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
-    first_arg = args[0]
-    if first_arg.startswith('all'):
-        first_arg = first_arg.lower()
-    args = list(set(arg.upper() for arg in args))  # remove eventual duplicates and upper everything
+def __parse_categories(args: tuple) -> tuple:
     categories = set(arg for arg in args if arg in ('CS', 'TM', 'ME', 'EC', 'CT', 'HT', 'ST', 'HP'))
     if len(categories) == 0 or 'ALL_CAT' in args:
         categories = ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
     elif 'HT' in categories:  # ues HT are named CT in the ENT
         categories.remove('HT')
         categories.add('CT')
-    categories = tuple(categories)
+    return tuple(categories)
+
+
+def __parse_semesters(args: tuple) -> tuple:
     if 'ALL_SEM' in args:
-        return first_arg, ('all_sem',), categories
+        return 'all_sem',
     branches = ('TC', 'ISI', 'RT', 'MTE', 'MM', 'GM', 'GI', 'A2I')
-    semesters = tuple(set(arg for arg in args if any(arg.startswith(branch) for branch in branches)))
+    return tuple(set(arg for arg in args if any(arg.startswith(branch) for branch in branches)))
+
+
+def letters_parse_args(args: tuple | list) -> tuple[str | None, tuple | None, tuple]:
+    if len(args) == 0:  # default behaviour when no argument : all letters of last semester
+        return None, None, ('CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP')
+    first_arg = args[0]
+    if first_arg.startswith('all'):
+        first_arg = first_arg.lower()
+    args = tuple(set(arg.upper() for arg in args))  # remove eventual duplicates and upper everything
+    categories = __parse_categories(args)
+    semesters = __parse_semesters(args)
     return first_arg, semesters, categories
