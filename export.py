@@ -1,5 +1,3 @@
-from itertools import accumulate
-
 import openpyxl.styles.fonts
 from openpyxl import Workbook
 from custom_types import ue_set
@@ -19,7 +17,7 @@ def __get_max_sub_elem(content: ue_set) -> dict[str, int]:
 
     as an input will make the function
     return : ::
-            {'CS': 2, 'TM': 3, 'ME': 2}
+        {'CS': 2, 'TM': 3, 'ME': 2}
     """
     max_sizes = dict()
     for elem in content.values():
@@ -33,6 +31,14 @@ def __get_max_sub_elem(content: ue_set) -> dict[str, int]:
 
 
 def __get_cum_row_per_cat(row_per_category: dict[str, int]) -> tuple[int, dict[str, int]]:
+    """
+    Build and return a cumulative dict based on the dict given and the value of the sum of everything.
+    Example: ::
+        {'a': 1, 'b': 5, 'c': 3, 'd': 4}
+    Will
+    return: ::
+        tuple(13, {'a': 1, 'b': 6, 'c': 9, 'd': 13}
+    """
     cum_sum = 0
     result_dict = dict()
     for key, nb_rows in row_per_category.items():
@@ -42,6 +48,14 @@ def __get_cum_row_per_cat(row_per_category: dict[str, int]) -> tuple[int, dict[s
 
 
 def __get_content_rows(content: ue_set, row_per_category: dict[str, int] = None) -> list[list[list[str, str, str]]]:
+    """
+    Build a list of list of elements corresponding to the content of the table to export from a nested dict
+    :param content: a nested dict with the content to export
+    :param row_per_category: a dictionary association each category of ue to the number of rows to display it.
+    If it is not given, the function builds it.
+    :return: a nested list corresponding to the content to display. Each cell will be set like [name, letter, credits].
+    Cells which must be empty will have the value ['', '', ''].
+    """
     if row_per_category is None:
         row_per_category = __get_max_sub_elem(content)
     total_rows, cumulative_rows = __get_cum_row_per_cat(row_per_category)
@@ -69,38 +83,34 @@ def to_xls(content: ue_set) -> str:
     font = openpyxl.styles.Font(bold=True)
     align = openpyxl.styles.Alignment(horizontal='center', vertical='center')
     row_per_category = __get_max_sub_elem(content)
-    col = 2
-    for title, elem in content.items():
-        worksheet.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + 2)
-        worksheet.cell(1, col).value = title
-        worksheet.cell(1, col).font = font
-        worksheet.cell(1, col).alignment = align
-        row = 2
-        for sub_title, sub_elem in elem.items():
-            size = 0
-            add_row = row_per_category[sub_title]
-            if add_row > 0:
-                worksheet.merge_cells(start_row=row, start_column=1, end_row=row + add_row - 1, end_column=1)
-            worksheet.cell(row, 1).value = sub_title
-            worksheet.cell(row, 1).alignment = align
-            if len(sub_elem) > 0:
-                for ue in sub_elem:
-                    if len(ue) == 0:
-                        continue
-                    for i, ue_info in enumerate(ue):
-                        if ue_info.isdigit():
-                            ue_info = int(ue_info)
-                        worksheet.cell(row + size, col + i).value = ue_info
-                    size += 1
-            row += add_row
-        col += 3
+    table = __get_content_rows(content, row_per_category)
+    for col, col_title in enumerate(content.keys()):
+        worksheet.merge_cells(start_row=1, start_column=2 + col * 3, end_row=1, end_column=4 + col * 3)
+        worksheet.cell(1, 2 + col * 3).value = col_title
+        worksheet.cell(1, 2 + col * 3).font = font
+        worksheet.cell(1, 2 + col * 3).alignment = align
+    sub_key = next(iter(content))
+    row = 2
+    for row_title in content[sub_key].keys():
+        add_row = row_per_category[row_title]
+        if add_row > 0:
+            worksheet.merge_cells(start_row=row, start_column=1, end_row=row + add_row - 1, end_column=1)
+        worksheet.cell(row, 1).value = row_title
+        worksheet.cell(row, 1).alignment = align
+        row += add_row
+    for i, row in enumerate(table):
+        j = 2
+        for col_group in row:
+            for col in col_group:
+                worksheet.cell(i + 2, j).value = col
+                j += 1
     workbook.save('ues.xlsx')
     return 'ues.xlsx'
 
 
 def to_json(ues: ue_set) -> str:
     """
-    create a json file with the datas of the student file.
+    create a json file with the data of the student file.
     :return: the name of the file created
     :rtype: str
     """
@@ -110,6 +120,9 @@ def to_json(ues: ue_set) -> str:
 
 
 def to_latex(ues: ue_set) -> str:
+    """
+    export the data of the student file to LaTeX format
+    """
     row_per_category = __get_max_sub_elem(ues)
     categories = iter(row_per_category.keys())
     table = __get_content_rows(ues, row_per_category)
@@ -141,4 +154,38 @@ def to_latex(ues: ue_set) -> str:
 
 
 def to_tex(ues: ue_set) -> str:
+    """
+    export the data of the student file to LaTeX format
+    """
     return to_latex(ues)
+
+
+def to_html(ues: ue_set):
+    """
+    export the data of the student file to an HTML table.
+    """
+    row_per_cat = __get_max_sub_elem(ues)
+    table = __get_content_rows(ues, row_per_cat)
+    result = "<!DOCTYPE html>\n<html>\n<head>\n<style>table{border-collapse: collapse;}\n" \
+             "td,th{\nborder: 1px solid black;\ntext-align: center;\npadding: 10px;}</style>\n</head>\n<body> " \
+             "<table>\n  <thead>\n    <tr>\n      <th></th>\n      <th>"
+    result += "</th>\n      <th>".join(ues.keys()) + "</th>\n    </tr>\n  </thead>\n  <tbody>\n  "
+    rows_to_add = iter(row_per_cat.items())
+    rows_in_cat = 0
+    for row in table:
+        result += "  <tr>\n      "
+        while rows_in_cat == 0:
+            try:
+                next_item = next(rows_to_add)
+                cat_name, rows_in_cat = next_item
+                if rows_in_cat > 0:
+                    result += f"<td rowspan=\"{rows_in_cat}\">{cat_name}</td>\n      "
+            except StopIteration:
+                break
+        result += '<td>' + '</td>\n      <td>'.join("&nbsp;".join(col) if col[0] != '' else '' for col in row)
+        result += '</td>\n    </tr>\n  '
+        rows_in_cat -= 1
+    result += "</tbody>\n</table>\n</body></html>"
+    with open('ues.html', 'w') as f:
+        f.write(result)
+    return 'ues.html'

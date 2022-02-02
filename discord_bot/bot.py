@@ -115,9 +115,9 @@ async def del_cache(ctx):
 
 @bot.command(name='export')
 async def __export(ctx, file_format = "", *args):
-    if file_format not in ('xls', 'json', 'latex', 'tex'):
+    if file_format not in ('xls', 'json', 'latex', 'tex', 'html'):
         await ctx.send("Vous devez spécifier un format de fichier.\n"
-                       "Formats disponibles : xls, json, latex")
+                       "Formats disponibles : xls, json, latex, html")
         return
     bot_user = User(ctx.author.id)
     _, semesters, categories = letters_parse_args(args)
