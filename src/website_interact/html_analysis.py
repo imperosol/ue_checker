@@ -1,7 +1,7 @@
 import bs4
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from custom_types import response, ue_set
+from src.custom_types import response, ue_set
 
 
 def get_ue_table_html(page: response) -> bs4.element.Tag:
@@ -43,7 +43,7 @@ def extract_letters_category(page: list[Tag], semesters_list: list[str], categor
     return dossier_dict
 
 
-def extract_letters_semester(page: list[Tag], semesters_list, categories_list) -> ue_set:
+def extract_letters_semester(page: list[Tag], semesters_list = None, categories_list = None) -> ue_set:
     """
     extract from the page a dict with all UEs.
     The keys are the semesters and each element is a dict associating UEs to their category

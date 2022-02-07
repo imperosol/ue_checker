@@ -39,6 +39,6 @@ def init_session(session: requests.Session, username: str, password: str) -> Non
     __cas_login(session)
 
 
-def get_student_file(session: requests.Session):
+def get_student_file(session: requests.Session) -> requests.Response:
     return session.get(STUDENT_FILE_URL)
 

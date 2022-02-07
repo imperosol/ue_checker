@@ -7,7 +7,7 @@ from pathlib import Path
 from cache import put_in_cache, get_cache, _get_cache_wrapper
 from custom_types import response
 
-DB_PATH = Path().absolute() / "users.sqlite"
+DB_PATH = Path().absolute().parent / "users.sqlite"
 
 
 class OverwriteError(Exception):

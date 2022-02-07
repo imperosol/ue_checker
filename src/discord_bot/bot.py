@@ -1,13 +1,15 @@
 import os
+from time import time, sleep
+
 import discord
 from discord.ext import commands
 
-import export
-from discord_bot.aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
+from src import export
+from aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
     get_student_file_page, letters_parse_args
-from website_interact.html_analysis import extract_decisions, extract_letters_semester
-from confidential import BOT_TOKEN
-from users import User, UserNotFoundError, CacheError
+from src.website_interact.html_analysis import extract_decisions, extract_letters_semester
+from src.confidential import BOT_TOKEN
+from src.users import User, UserNotFoundError, CacheError
 
 intents = discord.Intents.default()
 intents.members = True
@@ -127,3 +129,28 @@ async def __export(ctx, file_format = "", *args):
     export_file = export_method(ues)
     await ctx.send(file=discord.File(export_file))
     os.remove(export_file)
+
+
+@bot.command()
+async def check_change(ctx: discord.ext.commands.Context, duration: str = "", interval: str = "") -> None:
+    """work in progress"""
+    if duration.isdigit() and interval.isdigit():
+        duration, interval = 60 * int(duration), int(interval)
+    else:
+        await ctx.send('Erreur : vous devez choisir des nombres entiers')
+        return
+    bot_user = User(ctx.author.id)
+    page = await get_student_file_page(ctx, bot_user)
+    categories = 'CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP'
+    old_ues = extract_letters_semester(page, None, categories)
+    while duration > 0:
+        start = time()
+        page = await get_student_file_page(ctx, bot_user)
+        new_ues = extract_letters_semester(page, None, categories)
+        if new_ues != old_ues:
+            await ctx.send(f"{ctx.author.mention} votre dossier étudiant a été modifié")
+        else:
+            print("pas de changement")
+        end = time()
+        duration -= interval
+        sleep(interval - (end - start))

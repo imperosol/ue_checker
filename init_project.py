@@ -1,5 +1,5 @@
 import sqlite3
-from users import DB_PATH
+from src.users import DB_PATH
 from pathlib import Path
 from cryptography.fernet import Fernet
 
@@ -25,7 +25,7 @@ def __create_database():
 
 
 def __create_confidential():
-    confidential_path = Path().absolute() / "confidential.py"
+    confidential_path = Path().absolute() / 'src' / "confidential.py"
     if confidential_path.exists():
         return
     with open(confidential_path, "w") as f:
@@ -38,5 +38,7 @@ BOT_TOKEN = ''\n
 
 
 if __name__ == '__main__':
+    print("Création de la base de données")
     __create_database()
+    print("Création du fichier de données confidentielles")
     __create_confidential()
