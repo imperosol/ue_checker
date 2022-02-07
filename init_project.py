@@ -81,7 +81,6 @@ def __update_outdated_packages(outdated):
         print("All packages are up-to-date")
 
 
-
 def __install_packages():
     required = {'discord', 'cryptography', 'bs4', 'requests'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
@@ -97,10 +96,26 @@ def __install_packages():
     __update_outdated_packages(outdated)
 
 
+def __check_python_version():
+    version = sys.version_info
+    if version.major < 3:
+        print("Dude, you're not using Python3, how can you be this stupid ?\n"
+              "Just install Python 3.10 or higher and come back then.", file=sys.stderr)
+        exit(0)
+    if version.minor < 10:
+        print("Python 3.10 or higher is required to run this program, while you are using"
+              f"{version.major}.{version.minor}.{version.micro}.\n"
+              "Please update your version of Python.", file=sys.stderr)
+        exit(0)
+
+
 if __name__ == '__main__':
+    __check_python_version()
     print("Check packages...")
     __install_packages()
     print("Database creation...")
     __create_database()
     print("Confidential data file creation...")
     __create_confidential()
+    print("Project initialization complete !")
+    exit(0)
