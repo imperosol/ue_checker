@@ -1,5 +1,5 @@
 import threading
-from custom_types import response
+from src.custom_types import response
 
 # TODO replace the current organization based on a list by an organization based on a dict (would be more efficient)
 __caches = []

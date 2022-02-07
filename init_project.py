@@ -42,7 +42,7 @@ BOT_TOKEN = ''\n
 
 
 def __get_outdated(libs):
-    reqs = subprocess.check_output(['python', '-m', 'pip', 'list', '--outdated'])
+    reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'list', '--outdated'])
     outdated = {r.split()[0] for r in reqs.decode().split('\n')[2:] if len(r) > 1}
     # remove up-to-date packages
     up_to_date = libs - outdated.intersection(libs)
@@ -57,7 +57,8 @@ def __install_missing_packages(missing):
         answer = input("Do you want to install those packages ? (y/n) ")
         if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Install packages...")
-            subprocess.check_call(['python', '-m', 'pip', 'install', *missing])
+            python = sys.executable
+            subprocess.check_call([python, '-m', 'pip', 'install', *missing])
         else:
             print("Can't process further without the packages. Cancel project initialization.")
             exit(0)
@@ -72,7 +73,8 @@ def __update_outdated_packages(outdated):
         answer = input("Do you want to update those packages ? (y/n) ")
         if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Update packages...")
-            subprocess.check_call(['python', '-m', 'pip', 'install', *outdated, '--upgrade'])
+            python = sys.executable
+            subprocess.check_call([python, '-m', 'pip', 'install', *outdated, '--upgrade'])
         else:
             print("Packages not updated. Beware that this may cause error in the future")
     else:

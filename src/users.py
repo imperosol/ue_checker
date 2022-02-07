@@ -1,11 +1,11 @@
 import sqlite3
 
 from cryptography.fernet import Fernet
-from confidential import FERNET_KEY
-from website_interact.ent_requests import init_session
+from src.confidential import FERNET_KEY
+from src.website_interact.ent_requests import init_session
 from pathlib import Path
-from cache import put_in_cache, get_cache, _get_cache_wrapper
-from custom_types import response
+from src.cache import put_in_cache, get_cache, _get_cache_wrapper
+from src.custom_types import response
 
 DB_PATH = Path().absolute().parent / "users.sqlite"
 

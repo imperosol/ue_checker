@@ -1,6 +1,6 @@
 import openpyxl.styles.fonts
 from openpyxl import Workbook
-from custom_types import ue_set
+from .custom_types import ue_set
 import json
 
 
