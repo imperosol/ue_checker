@@ -26,13 +26,6 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
 
 
-# @bot.command(name='help', description="Aide générale sur le bot. Ne prends pas d'argument")
-# async def __help(ctx):
-#     result = "Les commandes disponibles sont :\n" \
-#              + "\n".join(command.name for command in bot.commands)
-#     await ctx.send(result)
-
-
 @bot.command()
 async def get_decision(ctx, semester: str = 'last') -> None:
     semester = semester.replace(' ', '')
@@ -101,8 +94,7 @@ async def cache(ctx, lifetime = '5'):
     if not lifetime.isdigit():
         return
     lifetime = int(lifetime)
-    if lifetime > 10:
-        await ctx.send("Vous n'avez pas le droit de mettre en cache un fichier pendant plus de 10 minutes")
+    if not __is_lifetime_valid(ctx, lifetime):
         return
     bot_user = User(ctx.author.id)
     page = await get_student_file_page(ctx, bot_user, check_cache=False)

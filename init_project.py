@@ -57,8 +57,7 @@ def __install_missing_packages(missing):
         answer = input("Do you want to install those packages ? (y/n) ")
         if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Install packages...")
-            python = sys.executable
-            subprocess.check_call([python, '-m', 'pip', 'install', *missing])
+            subprocess.check_call(['python', '-m', 'pip', 'install', *missing])
         else:
             print("Can't process further without the packages. Cancel project initialization.")
             exit(0)
@@ -73,8 +72,7 @@ def __update_outdated_packages(outdated):
         answer = input("Do you want to update those packages ? (y/n) ")
         if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Update packages...")
-            python = sys.executable
-            subprocess.check_call([python, '-m', 'pip', 'install', *outdated, '--upgrade'])
+            subprocess.check_call(['python', '-m', 'pip', 'install', *outdated, '--upgrade'])
         else:
             print("Packages not updated. Beware that this may cause error in the future")
     else:
