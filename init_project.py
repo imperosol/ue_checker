@@ -57,7 +57,7 @@ def __install_packages():
     outdated = installed - missing
     # checking for missing packages can be a really long task, so we use a different thread
     # to make it while performing other actions.
-    get_outdated_thread = Thread(target=__get_outdated, args=(installed,))
+    get_outdated_thread = Thread(target=__get_outdated, args=(outdated,))
     get_outdated_thread.start()
     if missing:
         print("Following packages used by the program are missing :\n\t- " +
@@ -72,7 +72,7 @@ def __install_packages():
             exit(0)
     else:
         print("No missing packages")
-    print("Check outdated packages")
+    print("Check outdated packages...")
     get_outdated_thread.join()
     if outdated:
         print("Following packages should be updated :\n\t- " +
