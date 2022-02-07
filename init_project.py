@@ -55,7 +55,7 @@ def __install_packages():
     required = {'discord', 'cryptography', 'bs4', 'requests'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
     missing = required - installed
-    outdated = installed - missing
+    outdated = required - missing
     # checking for missing packages can be a really long task, so we use a different thread
     # to make it while performing other actions.
     get_outdated_thread = Thread(target=__get_outdated, args=(outdated,))
