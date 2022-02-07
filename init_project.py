@@ -42,7 +42,7 @@ BOT_TOKEN = ''\n
 
 
 def __get_outdated(libs):
-    reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'list', '--outdated'])
+    reqs = subprocess.check_output(['python', '-m', 'pip', 'list', '--outdated'])
     outdated = {r.split()[0] for r in reqs.decode().split('\n')[2:] if len(r) > 1}
     # remove up-to-date packages
     up_to_date = libs - outdated.intersection(libs)
