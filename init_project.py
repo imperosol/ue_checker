@@ -72,6 +72,7 @@ def __install_packages():
             exit(0)
     else:
         print("No missing packages")
+    print("Check outdated packages")
     get_outdated_thread.join()
     if outdated:
         print("Following packages should be updated :\n\t- " +
@@ -80,7 +81,7 @@ def __install_packages():
         if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Update packages...")
             python = sys.executable
-            subprocess.check_call([python, '-m', 'pip', 'install', '-U', *outdated])
+            subprocess.check_call([python, '-m', 'pip', 'install', *outdated, '--upgrade'])
         else:
             print("Packages non updated. Beware that this may cause error in the future")
     else:
