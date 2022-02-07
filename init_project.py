@@ -47,10 +47,12 @@ def __install_packages():
     if missing:
         print("Following packages used by the program are missing :\n\t- " +
               "\n\t- ".join(m for m in missing))
-        answer = input("Do you want to install those packages ? (y/n)")
+        answer = input("Do you want to install those packages ? (y/n) ")
         if answer in ('y', 'yes', 'o', 'oui'):
+            print("Install packages...")
             python = sys.executable
-            subprocess.check_call([python, '-m', 'pip', 'install', *missing], stdout=subprocess.DEVNULL)
+            print(python, file=sys.stderr)
+            subprocess.check_call([python, '-m', 'pip', 'install', *missing])
         else:
             print("Can't process further without the packages. Cancel project initialization.")
             exit(0)
