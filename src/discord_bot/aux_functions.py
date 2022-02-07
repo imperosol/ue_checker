@@ -4,12 +4,12 @@ from typing import Callable
 import discord
 import requests
 
-from website_interact.html_analysis import get_ue_td_html
-from discord_bot import bot
-from users import UserNotFoundError, User
-from website_interact.ent_requests import get_student_file
-from website_interact.html_analysis import extract_letters_semester, extract_letters_category
-from custom_types import ue_set
+from src.website_interact.html_analysis import get_ue_td_html
+from src.discord_bot import commands as bot
+from src.users import UserNotFoundError, User
+from src.website_interact.ent_requests import get_student_file
+from src.website_interact.html_analysis import extract_letters_semester, extract_letters_category
+from src.custom_types import ue_set
 
 
 async def send_embed_letters(ctx, letters: ue_set) -> None:

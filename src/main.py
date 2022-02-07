@@ -1,5 +1,5 @@
 from website_interact.ent_requests import set_cipher
-from discord_bot.bot import start_bot
+from discord_bot.commands import start_bot
 
 
 if __name__ == '__main__':

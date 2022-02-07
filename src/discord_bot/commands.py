@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 from src import export
-from aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
+from .aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
     get_student_file_page, letters_parse_args
 from src.website_interact.html_analysis import extract_decisions, extract_letters_semester
 from src.confidential import BOT_TOKEN
@@ -24,6 +24,13 @@ def start_bot():
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
+
+
+# @bot.command(name='help', description="Aide générale sur le bot. Ne prends pas d'argument")
+# async def __help(ctx):
+#     result = "Les commandes disponibles sont :\n" \
+#              + "\n".join(command.name for command in bot.commands)
+#     await ctx.send(result)
 
 
 @bot.command()
@@ -46,6 +53,11 @@ async def get_letters(ctx, *args):
 
 @bot.command()
 async def register(ctx: discord.ext.commands.Context) -> None:
+    """
+    Start a registration process by direct message.
+    The discord id, ent username and ent password will be stored in a database.
+    The database password is encrypted with a unique key.
+    """
     new_user = User(ctx.author.id)
     if new_user.is_registered():
         await ctx.send(f"L'utilisateur {ctx.author.name} est déjà enregistré\n"
@@ -58,6 +70,10 @@ async def register(ctx: discord.ext.commands.Context) -> None:
         new_user.save()
         await ctx.author.dm_channel.send("Enregistrement confirmé. Vous pouvez vous désinscire à tout moment avec la "
                                          "commande `!unregister`")
+
+
+# @bot.command()
+# async def
 
 
 @bot.command()
