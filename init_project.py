@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+from threading import Thread
 import sys
 import pkg_resources
 import subprocess
@@ -40,24 +41,50 @@ BOT_TOKEN = ''\n
         f.write(f"FERNET_KEY = {Fernet.generate_key()}")
 
 
+def __get_outdated(libs: set | list | tuple) -> None:
+    reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'list', '--outdated'])
+    outdated = {r.split()[0] for r in reqs.decode().split('\n')[2:] if len(r) > 1}
+    # remove up-to-date packages
+    up_to_date = libs - outdated.intersection(libs)
+    for u in up_to_date:
+        libs.remove(u)
+
+
 def __install_packages():
     required = {'discord', 'cryptography', 'bs4', 'requests'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
     missing = required - installed
+    outdated = installed - missing
+    # checking for missing packages can be a really long task, so we use a different thread
+    # to make it while performing other actions.
+    get_outdated_thread = Thread(target=__get_outdated, args=(installed,))
+    get_outdated_thread.start()
     if missing:
         print("Following packages used by the program are missing :\n\t- " +
               "\n\t- ".join(m for m in missing))
         answer = input("Do you want to install those packages ? (y/n) ")
-        if answer in ('y', 'yes', 'o', 'oui'):
+        if answer.lower() in ('y', 'yes', 'o', 'oui'):
             print("Install packages...")
             python = sys.executable
-            print(python, file=sys.stderr)
             subprocess.check_call([python, '-m', 'pip', 'install', *missing])
         else:
             print("Can't process further without the packages. Cancel project initialization.")
             exit(0)
     else:
         print("No missing packages")
+    get_outdated_thread.join()
+    if outdated:
+        print("Following packages should be updated :\n\t- " +
+              "\n\t- ".join(o for o in outdated))
+        answer = input("Do you want to update those packages ? (y/n) ")
+        if answer.lower() in ('y', 'yes', 'o', 'oui'):
+            print("Update packages...")
+            python = sys.executable
+            subprocess.check_call([python, '-m', 'pip', 'install', '-U', *outdated])
+        else:
+            print("Packages non updated. Beware that this may cause error in the future")
+    else:
+        print("All packages are up-to-date")
 
 
 if __name__ == '__main__':
