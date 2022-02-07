@@ -7,9 +7,7 @@ from pathlib import Path
 from src.cache import put_in_cache, get_cache, _get_cache_wrapper
 from src.custom_types import response
 
-print(Path(__file__).absolute())
-print(Path().absolute())
-DB_PATH = Path(__file__).absolute().parent / "users.sqlite"
+DB_PATH = Path(__file__).resolve().parent.parent / "users.sqlite"
 print(DB_PATH)
 
 
