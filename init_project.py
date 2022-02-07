@@ -1,5 +1,4 @@
 import sqlite3
-from src.users import DB_PATH
 from pathlib import Path
 import sys
 import pkg_resources
@@ -7,6 +6,7 @@ import subprocess
 
 
 def __create_database():
+    from src.users import DB_PATH
     if DB_PATH.exists():
         return
     db = sqlite3.connect(DB_PATH)
@@ -27,11 +27,7 @@ def __create_database():
 
 
 def __create_confidential():
-    try:
-        from cryptography.fernet import Fernet
-    except ModuleNotFoundError:
-        print("Package cryptography not installed", file=sys.stderr)
-        return
+    from cryptography.fernet import Fernet
     confidential_path = Path().absolute() / 'src' / "confidential.py"
     if confidential_path.exists():
         return
