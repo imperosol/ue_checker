@@ -27,7 +27,11 @@ def __create_database():
 
 
 def __create_confidential():
-    from cryptography.fernet import Fernet
+    try:
+        from cryptography.fernet import Fernet
+    except ModuleNotFoundError:
+        print("Package cryptography not installed", file=sys.stderr)
+        return
     confidential_path = Path().absolute() / 'src' / "confidential.py"
     if confidential_path.exists():
         return
