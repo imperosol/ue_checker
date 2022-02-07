@@ -7,11 +7,10 @@ import subprocess
 
 
 def __create_database():
-    import src.users
-    DB_PATH = src.users.DB_PATH
-    if DB_PATH.exists():
+    db_path = Path().absolute() / "users.sqlite"
+    if db_path.exists():  # don't overwrite if there is already an existing database
         return
-    db = sqlite3.connect(DB_PATH)
+    db = sqlite3.connect(db_path)
     cur = db.cursor()
     query = """create table users (
         discordId   integer
@@ -51,15 +50,7 @@ def __get_outdated(libs):
         libs.remove(u)
 
 
-def __install_packages():
-    required = {'discord', 'cryptography', 'bs4', 'requests'}
-    installed = {pkg.key for pkg in pkg_resources.working_set}
-    missing = required - installed
-    outdated = required - missing
-    # checking for missing packages can be a really long task, so we use a different thread
-    # to make it while performing other actions.
-    get_outdated_thread = Thread(target=__get_outdated, args=(outdated,))
-    get_outdated_thread.start()
+def __install_missing_packages(missing):
     if missing:
         print("Following packages used by the program are missing :\n\t- " +
               "\n\t- ".join(m for m in missing))
@@ -73,8 +64,9 @@ def __install_packages():
             exit(0)
     else:
         print("No missing packages")
-    print("Check outdated packages...")
-    get_outdated_thread.join()
+
+
+def __update_outdated_packages(outdated):
     if outdated:
         print("Following packages should be updated :\n\t- " +
               "\n\t- ".join(o for o in outdated))
@@ -84,9 +76,25 @@ def __install_packages():
             python = sys.executable
             subprocess.check_call([python, '-m', 'pip', 'install', *outdated, '--upgrade'])
         else:
-            print("Packages non updated. Beware that this may cause error in the future")
+            print("Packages not updated. Beware that this may cause error in the future")
     else:
         print("All packages are up-to-date")
+
+
+
+def __install_packages():
+    required = {'discord', 'cryptography', 'bs4', 'requests'}
+    installed = {pkg.key for pkg in pkg_resources.working_set}
+    missing = required - installed
+    outdated = required - missing
+    # checking for missing packages can be a really long task, so we use a different thread
+    # to make it while performing other actions.
+    get_outdated_thread = Thread(target=__get_outdated, args=(outdated,))
+    get_outdated_thread.start()
+    __install_missing_packages(missing)
+    print("Check outdated packages...")
+    get_outdated_thread.join()
+    __update_outdated_packages(outdated)
 
 
 if __name__ == '__main__':
