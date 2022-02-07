@@ -46,6 +46,7 @@ def __get_outdated(libs):
     outdated = {r.split()[0] for r in reqs.decode().split('\n')[2:] if len(r) > 1}
     # remove up-to-date packages
     up_to_date = libs - outdated.intersection(libs)
+    print(up_to_date, file=sys.stderr)
     for u in up_to_date:
         libs.remove(u)
 
@@ -74,6 +75,7 @@ def __install_packages():
         print("No missing packages")
     print("Check outdated packages...")
     get_outdated_thread.join()
+    print(outdated, file=sys.stderr)
     if outdated:
         print("Following packages should be updated :\n\t- " +
               "\n\t- ".join(o for o in outdated))
