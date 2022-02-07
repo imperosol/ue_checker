@@ -82,7 +82,7 @@ def __update_outdated_packages(outdated):
 
 
 def __install_packages():
-    required = {'discord', 'cryptography', 'bs4', 'requests'}
+    required = {'discord', 'cryptography', 'bs4', 'requests', 'openpyxl'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
     missing = required - installed
     outdated = required - missing

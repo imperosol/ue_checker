@@ -8,6 +8,7 @@ from src.cache import put_in_cache, get_cache, _get_cache_wrapper
 from src.custom_types import response
 
 DB_PATH = Path().absolute().parent / "users.sqlite"
+print(DB_PATH)
 
 
 class OverwriteError(Exception):
