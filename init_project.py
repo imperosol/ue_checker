@@ -41,7 +41,7 @@ BOT_TOKEN = ''\n
         f.write(f"FERNET_KEY = {Fernet.generate_key()}")
 
 
-def __get_outdated(libs: set | list | tuple) -> None:
+def __get_outdated(libs):
     reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'list', '--outdated'])
     outdated = {r.split()[0] for r in reqs.decode().split('\n')[2:] if len(r) > 1}
     # remove up-to-date packages
