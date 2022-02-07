@@ -1,7 +1,6 @@
 import sqlite3
 from src.users import DB_PATH
 from pathlib import Path
-from cryptography.fernet import Fernet
 import sys
 import pkg_resources
 import subprocess
@@ -28,6 +27,7 @@ def __create_database():
 
 
 def __create_confidential():
+    from cryptography.fernet import Fernet
     confidential_path = Path().absolute() / 'src' / "confidential.py"
     if confidential_path.exists():
         return
@@ -41,7 +41,7 @@ BOT_TOKEN = ''\n
 
 
 def __install_packages():
-    required = {'mutagen', 'gTTS'}
+    required = {'discord', 'cryptography', 'bs4', 'requests'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
     missing = required - installed
     if missing:
