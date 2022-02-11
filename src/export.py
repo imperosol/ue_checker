@@ -10,14 +10,21 @@ def __get_max_sub_elem(content: ue_set) -> dict[str, int]:
     and return a dictionary which associates each key of inner
     dictionary with the max number of elements in field.
     Example : ::
-        {
-            'TC1': {'CS': [1, 1], 'TM': [1],       'ME': [1]},
-            'TC2': {'CS': [1, 1], 'TM': [1, 1, 1], 'ME': [1, 1]}
-        }
-
+            'TC1': {
+                'CS': [['MATH01', 'C', '6'], ['PHYS11', 'B', '6']],
+                'TM': [['TNEV', 'C', '6']],
+                'EC': [['LE03', 'A', '4']],
+                'ME': [['GE21', 'B', '4']]
+            },
+            'TC5': {
+                'CS': [['SY01', 'D', '6']],
+                'TM': [['LO02', 'C', '6'], ['NF19', 'E', '6'], ['PETM4', 'A', '4']],
+                'EC': [['LG03', 'E', '4']],
+                'ME': [['GE36', 'F', '0']]
+            }
     as an input will make the function
     return : ::
-        {'CS': 2, 'TM': 3, 'ME': 2}
+        {'CS': 2, 'TM': 3, 'EC': 1, 'ME': 1}
     """
     max_sizes = dict()
     for elem in content.values():
@@ -42,6 +49,8 @@ def __get_cum_row_per_cat(row_per_category: dict[str, int]) -> tuple[int, dict[s
     cum_sum = 0
     result_dict = dict()
     for key, nb_rows in row_per_category.items():
+        if type(nb_rows) != int:
+            raise TypeError
         result_dict[key] = nb_rows + cum_sum
         cum_sum += nb_rows
     return cum_sum, result_dict
@@ -49,7 +58,7 @@ def __get_cum_row_per_cat(row_per_category: dict[str, int]) -> tuple[int, dict[s
 
 def __get_content_rows(content: ue_set, row_per_category: dict[str, int] = None) -> list[list[list[str, str, str]]]:
     """
-    Build a list of list of elements corresponding to the content of the table to export from a nested dict
+    Build a list of lists of elements corresponding to the content of the table to export from a nested dict
     :param content: a nested dict with the content to export
     :param row_per_category: a dictionary association each category of ue to the number of rows to display it.
     If it is not given, the function builds it.
@@ -126,9 +135,10 @@ def to_latex(ues: ue_set) -> str:
     row_per_category = __get_max_sub_elem(ues)
     categories = iter(row_per_category.keys())
     table = __get_content_rows(ues, row_per_category)
-    result = "\\documentclass{article}\n\\usepackage{multirow}\n\\begin{document}\n"
-    result += "\\begin{tabular}{|c" + "|ccc" * len(table[0]) + "|}\n\\hline\n"
-    result += '\t' + ' & '.join([''] + ["\\multicolumn{3}{c|}{" + title + "}" for title in ues]) + "\\\\\n\\hline\n"
+    result = "\\documentclass{article}\n\\usepackage{multirow}\n\\usepackage[utf8]{inputenc}\n\\usepackage{float}\n\n" \
+             + "\\begin{document}\n\\begin{figure}[H]\n\\makebox[\\textwidth]{\\begin{tabular}{|c" \
+             + "|ccc" * len(table[0]) + f"|}}\n\\cline{{2-{len(table[0]) * 3 + 1}}}\n" + "\t\\multicolumn{1}{c|}{} & " \
+             + ' & '.join(["\\multicolumn{3}{c|}{" + title + "}" for title in ues]) + "\\\\\n\\hline\n"
     nb_rows = 0
     current_category = next(categories)
     for row in table:
@@ -147,7 +157,7 @@ def to_latex(ues: ue_set) -> str:
                         break
                 except StopIteration:
                     break
-    result += '\\end{tabular}\n\\end{document}\n'
+    result += '\\end{tabular}}\n\\end{figure}\n\\end{document}\n'
     with open("ues.tex", "w") as f:
         f.write(result)
     return "ues.tex"

@@ -1,6 +1,6 @@
 *.gitignore
 *.csv
-/page.py
+*/page.py
 /testing/
 /users.sqlite
 /ues.csv
