@@ -2,6 +2,7 @@ import openpyxl.styles.fonts
 from openpyxl import Workbook
 from .custom_types import ue_set
 import json
+from pathlib import Path
 
 
 def __get_max_sub_elem(content: ue_set) -> dict[str, int]:
@@ -81,7 +82,7 @@ def __get_content_rows(content: ue_set, row_per_category: dict[str, int] = None)
     return result
 
 
-def to_xls(content: ue_set) -> str:
+def to_xls(content: ue_set) -> Path:
     """ Function to create an Excel file with the datas of the student file.
     :return: the name of the file created
     :rtype: str
@@ -113,22 +114,24 @@ def to_xls(content: ue_set) -> str:
             for col in col_group:
                 worksheet.cell(i + 2, j).value = col
                 j += 1
-    workbook.save('ues.xlsx')
-    return 'ues.xlsx'
+    path = Path(__file__).resolve().absolute().parent.parent / 'files' / 'ues.xlsx'
+    workbook.save(path)
+    return path
 
 
-def to_json(ues: ue_set) -> str:
+def to_json(ues: ue_set) -> Path:
     """
     create a json file with the data of the student file.
     :return: the name of the file created
     :rtype: str
     """
-    with open('ues.json', "w", encoding='utf-8') as f:
+    path = Path(__file__).resolve().absolute().parent.parent / 'files' / 'ues.json'
+    with open(path, "w", encoding='utf-8') as f:
         json.dump(ues, f, ensure_ascii=False, indent=2)
-    return 'ues.json'
+    return path
 
 
-def to_latex(ues: ue_set) -> str:
+def to_latex(ues: ue_set) -> Path:
     """
     export the data of the student file to LaTeX format
     """
@@ -158,19 +161,20 @@ def to_latex(ues: ue_set) -> str:
                 except StopIteration:
                     break
     result += '\\end{tabular}}\n\\end{figure}\n\\end{document}\n'
-    with open("ues.tex", "w") as f:
+    path = Path(__file__).resolve().absolute().parent.parent / 'files' / 'ues.tex'
+    with open(path, "w") as f:
         f.write(result)
-    return "ues.tex"
+    return path
 
 
-def to_tex(ues: ue_set) -> str:
+def to_tex(ues: ue_set) -> Path:
     """
     export the data of the student file to LaTeX format
     """
     return to_latex(ues)
 
 
-def to_html(ues: ue_set):
+def to_html(ues: ue_set) -> Path:
     """
     export the data of the student file to an HTML table.
     """
@@ -196,6 +200,7 @@ def to_html(ues: ue_set):
         result += '</td>\n    </tr>\n  '
         rows_in_cat -= 1
     result += "</tbody>\n</table>\n</body></html>"
-    with open('ues.html', 'w') as f:
+    path = Path(__file__).resolve().absolute().parent.parent / 'files' / 'ues.html'
+    with open(path, 'w') as f:
         f.write(result)
-    return 'ues.html'
+    return path

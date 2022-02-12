@@ -7,7 +7,7 @@ import subprocess
 
 
 def __create_database():
-    db_path = Path().absolute() / "users.sqlite"
+    db_path = Path().resolve() / "users.sqlite"
     if db_path.exists():  # don't overwrite if there is already an existing database
         return
     db = sqlite3.connect(db_path)
@@ -29,7 +29,7 @@ def __create_database():
 
 def __create_confidential():
     from cryptography.fernet import Fernet
-    confidential_path = Path().absolute() / 'src' / "confidential.py"
+    confidential_path = Path().resolve() / 'src' / "confidential.py"
     if confidential_path.exists():
         return
     with open(confidential_path, "w") as f:
@@ -109,6 +109,11 @@ def __check_python_version():
         exit(0)
 
 
+def __create_files_directory():
+    files_path = Path().resolve().absolute() / 'files'
+    files_path.mkdir()
+
+
 if __name__ == '__main__':
     __check_python_version()
     print("Check packages...")
@@ -117,5 +122,6 @@ if __name__ == '__main__':
     __create_database()
     print("Confidential data file creation...")
     __create_confidential()
+    __create_files_directory()
     print("Project initialization complete !")
     exit(0)
