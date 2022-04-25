@@ -10,6 +10,7 @@ from .aux_functions import send_embed_decision, dm_register, get_letters_semeste
 from src.website_interact.html_analysis import extract_decisions, extract_letters_semester
 from src.confidential import BOT_TOKEN
 from src.users import User, UserNotFoundError, CacheError
+from src.discord_bot.decorators import work_in_progress
 
 intents = discord.Intents.default()
 intents.members = True
@@ -65,10 +66,6 @@ async def register(ctx: discord.ext.commands.Context) -> None:
                                          "commande `!unregister`")
 
 
-# @bot.command()
-# async def
-
-
 @bot.command()
 async def unregister(ctx):
     try:
@@ -94,7 +91,7 @@ async def cache(ctx, lifetime = '5'):
     if not lifetime.isdigit():
         return
     lifetime = int(lifetime)
-    if not __is_lifetime_valid(ctx, lifetime):
+    if not await __is_lifetime_valid(ctx, lifetime):
         return
     bot_user = User(ctx.author.id)
     page = await get_student_file_page(ctx, bot_user, check_cache=False)
@@ -107,7 +104,7 @@ async def set_cache_life(ctx, lifetime = '0'):
     if not lifetime.isdigit():
         return
     lifetime = int(lifetime)
-    if not __is_lifetime_valid(ctx, lifetime):
+    if not await __is_lifetime_valid(ctx, lifetime):
         return
     bot_user = User(ctx.author.id)
     try:
@@ -119,12 +116,15 @@ async def set_cache_life(ctx, lifetime = '0'):
 
 @bot.command()
 async def del_cache(ctx):
-    User(ctx.author.id).delete_cache()
-    await ctx.send("Fichiers en cache supprimés")
+    try:
+        User(ctx.author.id).delete_cache()
+        await ctx.send("Fichiers en cache supprimés")
+    except CacheError:
+        await ctx.send("Aucun fichier en cache trouvé")
 
 
 @bot.command(name='export')
-async def __export(ctx, file_format = "", *args):
+async def _export(ctx, file_format = "", *args):
     if file_format not in ('xls', 'json', 'latex', 'tex', 'html'):
         await ctx.send("Vous devez spécifier un format de fichier.\n"
                        "Formats disponibles : xls, json, latex, html")
@@ -140,14 +140,19 @@ async def __export(ctx, file_format = "", *args):
 
 
 @bot.command()
+@work_in_progress()
 async def check_change(ctx: discord.ext.commands.Context, duration: str = "", interval: str = "") -> None:
     """work in progress"""
+    if ctx.author.id != 423937066620157953:
+        await ctx.send("Fonction en cours de développement, vous n'avez pas le droit de l'utiliser pour le moment")
+        return
     if duration.isdigit() and interval.isdigit():
-        duration, interval = 60 * int(duration), int(interval)
+        duration, interval = abs(60 * int(duration)), abs(int(interval))
     else:
         await ctx.send('Erreur : vous devez choisir des nombres entiers')
         return
     bot_user = User(ctx.author.id)
+
     page = await get_student_file_page(ctx, bot_user)
     categories = 'CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP'
     old_ues = extract_letters_semester(page, None, categories)
@@ -155,10 +160,19 @@ async def check_change(ctx: discord.ext.commands.Context, duration: str = "", in
         start = time()
         page = await get_student_file_page(ctx, bot_user)
         new_ues = extract_letters_semester(page, None, categories)
+        print(new_ues)
         if new_ues != old_ues:
+
             await ctx.send(f"{ctx.author.mention} votre dossier étudiant a été modifié")
+            print(f"{ctx.author.mention} votre dossier étudiant a été modifié")
         else:
             print("pas de changement")
         end = time()
         duration -= interval
         sleep(interval - (end - start))
+
+
+@bot.command(aliases=['github'])
+async def git(ctx):
+    await ctx.send("Dépôt github : `https://github.com/imperosol/ue_checker`\n"
+                   "Depuis un terminal : `https://github.com/imperosol/ue_checker.git`")

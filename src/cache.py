@@ -1,13 +1,16 @@
 import threading
 from src.custom_types import response
 
-# TODO replace the current organization based on a list by an organization based on a dict (would be more efficient)
-__caches = []
+# keys : user.discord_id
+# values : __Elem
+__caches = dict()
 
 
 class __Elem:
-    """ Wrapper for an element in the cache, containing the element in cache, the id of the owner
-     of this element and a Timer object which trigger the removal of the element from the cache when over """
+    """
+    Wrapper for an element in the cache, containing the element in cache, the id of the owner
+    of this element and a Timer object which trigger the removal of the element from the cache when over
+    """
 
     def __init__(self, page, owner, lifetime):
         self.page = page
@@ -16,9 +19,7 @@ class __Elem:
         self.life.start()
 
     def die(self):
-        if self.life.is_alive():
-            self.life.cancel()
-        _remove(self)
+        remove_cache(self.owner)
 
     def new_lifetime(self, new_lifetime):
         self.life.cancel()
@@ -26,25 +27,31 @@ class __Elem:
         self.life.start()
 
 
-def put_in_cache(session, owner, lifetime: int = 5):
-    previous_cache = _get_cache_wrapper(owner)
-    if previous_cache is not None:  # remove the older cache before adding a new one
-        _remove(previous_cache)
-    __caches.append(__Elem(session, owner, lifetime))
+def put_in_cache(session, owner, lifetime: int = 5) -> None:
+    if has_cache(owner):
+        print('yo')
+        __caches[owner.discord_id].life.cancel()
+    __caches[owner.discord_id] = __Elem(session, owner, lifetime)
 
 
-def _remove(to_remove) -> None:
-    to_remove.life.cancel()
-    __caches.remove(to_remove)
+def remove_cache(owner) -> response | None:
+    c = __caches.get(owner.discord_id)
+    if c is None:
+        return None
+    c.life.cancel()
+    return __caches.pop(owner.discord_id).page
 
 
 def has_cache(user) -> bool:
-    return any(user.discord_id == elem.owner.discord_id for elem in __caches)
+    return __caches.get(user.discord_id) is not None
 
 
-def get_cache(user) -> response:
-    return next((elem.page for elem in __caches if user.discord_id == elem.owner.discord_id), None)
+def get_cache(user) -> response | None:
+    res = __caches.get(user.discord_id)
+    if res is not None:
+        return res.page
+    return None
 
 
 def _get_cache_wrapper(user) -> __Elem:
-    return next((elem for elem in __caches if user.discord_id == elem.owner.discord_id), None)
+    return __caches.get(user.discord_id)

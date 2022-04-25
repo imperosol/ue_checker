@@ -4,7 +4,7 @@ from cryptography.fernet import Fernet
 from src.confidential import FERNET_KEY
 from src.website_interact.ent_requests import init_session
 from pathlib import Path
-from src.cache import put_in_cache, get_cache, _get_cache_wrapper
+from src.cache import put_in_cache, get_cache, _get_cache_wrapper, remove_cache
 from src.custom_types import response
 
 DB_PATH = Path(__file__).resolve().parent.parent / "users.sqlite"
@@ -134,7 +134,6 @@ class User:
         user_cache.new_lifetime(new_lifetime)
 
     def delete_cache(self) -> None:
-        user_cache = _get_cache_wrapper(self)
-        if user_cache is None:
+        res = remove_cache(self)
+        if res is None:
             raise CacheError()
-        user_cache.die()

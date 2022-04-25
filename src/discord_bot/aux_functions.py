@@ -20,8 +20,9 @@ async def send_embed_letters(ctx, letters: ue_set) -> None:
             ue_list = letters[field][subfield]
             for ue in ue_list:
                 if len(ue) > 0:
-                    result += f"- {ue[0]} : {ue[1]} " \
-                              + (f"({ue[2]} crédits)" if len(ue) == 3 else "") \
+                    result += f"- {ue[0]}" \
+                              + (f" : {ue[1]}" if len(ue) >= 2 else "") \
+                              + (f"({ue[2]} crédits)" if len(ue) >= 3 else "") \
                               + f" [{subfield}]\n"
         if result:
             embed.add_field(name=field, value=result, inline=True)
@@ -32,15 +33,21 @@ async def send_embed_decision(ctx, decisions: dict[str, str], semester) -> None:
     embed = discord.Embed(title="Décisions jurys")
     if semester == 'all':
         for decision in decisions:
-            embed.add_field(name=decision, value=decisions[decision], inline=True)
+            if decisions[decision]:
+                embed.add_field(name=decision, value=decisions[decision], inline=True)
     elif semester == 'last':
-        key = list(decisions.keys())[-1]
-        embed.add_field(name=key, value=decisions[key], inline=True)
+        key = next((key for key in reversed(decisions.keys()) if decisions[key] != ''), None)
+        if key:
+            embed.add_field(name=key, value=decisions[key], inline=True)
+        else:
+            embed.add_field(name="", value="Pas d'avis de jury trouvé", inline=True)
     elif semester not in decisions:
         await ctx.send("Semestre non trouvé")
         return
-    else:
+    elif decisions[semester] != "":
         embed.add_field(name=semester, value=decisions[semester], inline=True)
+    else:
+        embed.add_field(name=semester, value="Pas d'avis publié pour le moment", inline=True)
     await ctx.send(embed=embed)
 
 
@@ -167,3 +174,7 @@ def letters_parse_args(args: tuple | list) -> tuple[str | None, tuple | None, tu
     categories = __parse_categories(args)
     semesters = __parse_semesters(args)
     return first_arg, semesters, categories
+
+
+def watch_student_file():
+    pass
