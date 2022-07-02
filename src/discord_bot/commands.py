@@ -1,16 +1,18 @@
+import asyncio
 import os
 from time import time, sleep
 
 import discord
 from discord.ext import commands
 
+import src.validators as validators
 from src import export
-from .aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
-    get_student_file_page, letters_parse_args
-from src.website_interact.html_analysis import extract_decisions, extract_letters_semester
 from src.confidential import BOT_TOKEN
-from src.users import User, UserNotFoundError, CacheError
 from src.discord_bot.decorators import work_in_progress
+from src.users import User, UserNotFoundError, CacheError
+from src.website_interact.html_analysis import extract_decisions, extract_letters_semester
+from .aux_functions import send_embed_decision, dm_register, get_letters_semester, get_letters_category, \
+    get_student_file_page, letters_parse_args, get_ues_to_watch, get_ues_changes, send_embed_letters
 
 intents = discord.Intents.default()
 intents.members = True
@@ -141,35 +143,26 @@ async def _export(ctx, file_format = "", *args):
 
 @bot.command()
 @work_in_progress()
-async def check_change(ctx: discord.ext.commands.Context, duration: str = "", interval: str = "") -> None:
-    """work in progress"""
-    if ctx.author.id != 423937066620157953:
-        await ctx.send("Fonction en cours de développement, vous n'avez pas le droit de l'utiliser pour le moment")
+async def start_watch(ctx, interval = 60):
+    """
+    Start a watch on the student file.
+    """
+    try:
+        validators.duration(interval, min_val=10, max_val=120)
+    except ValueError as e:
+        await ctx.send(e)
         return
-    if duration.isdigit() and interval.isdigit():
-        duration, interval = abs(60 * int(duration)), abs(int(interval))
-    else:
-        await ctx.send('Erreur : vous devez choisir des nombres entiers')
-        return
-    bot_user = User(ctx.author.id)
-
-    page = await get_student_file_page(ctx, bot_user)
-    categories = 'CS', 'TM', 'ME', 'EC', 'CT', 'ST', 'HP'
-    old_ues = extract_letters_semester(page, None, categories)
-    while duration > 0:
-        start = time()
-        page = await get_student_file_page(ctx, bot_user)
-        new_ues = extract_letters_semester(page, None, categories)
-        print(new_ues)
-        if new_ues != old_ues:
-
-            await ctx.send(f"{ctx.author.mention} votre dossier étudiant a été modifié")
-            print(f"{ctx.author.mention} votre dossier étudiant a été modifié")
-        else:
-            print("pas de changement")
-        end = time()
-        duration -= interval
-        sleep(interval - (end - start))
+    interval = int(interval)
+    user = User(ctx.author.id)
+    await ctx.send(f"Suivi du dossier étudiant lancé toutes les {interval} minutes")
+    ues = get_ues_to_watch(user)
+    for _ in range(24):
+        await asyncio.sleep(interval * 60)
+        new_ues = get_ues_changes(user, ues)
+        if len(new_ues) > 0:
+            ues_str = ",".join(f"{ue[0]} ({ue[1]})" for ue in new_ues)
+            await ctx.author.dm_channel.send(f"Nouveaux résultats : {ues_str}")
+        ues = [ue for ue in ues if ue not in [new_ue[0] for new_ue in new_ues]]
 
 
 @bot.command(aliases=['github'])

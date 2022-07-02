@@ -1,4 +1,6 @@
 import asyncio
+import concurrent.futures
+import typing
 from typing import Callable
 
 import discord
@@ -9,7 +11,7 @@ from src.discord_bot import commands as bot
 from src.users import UserNotFoundError, User
 from src.website_interact.ent_requests import get_student_file
 from src.website_interact.html_analysis import extract_letters_semester, extract_letters_category
-from src.custom_types import ue_set
+from src.custom_types import ue_set, ue_t
 
 
 async def send_embed_letters(ctx, letters: ue_set) -> None:
@@ -95,8 +97,15 @@ async def get_student_file_page(ctx, bot_user: User, check_cache = True):
             await __init_session_from_discord(ctx, bot_user, session)
         except UserNotFoundError:
             return
-        page = await __get_student_file_from_discord(ctx, session)
-        page = get_ue_td_html(page)
+        nb_try = 4
+        while nb_try > 0:
+            try:
+                page = await __get_student_file_from_discord(ctx, session)
+                page = get_ue_td_html(page)
+                nb_try = 0
+            except:
+                nb_try -= 1
+                await ctx.send("Erreur lors de la récupération de la page, rechargement en cours...")
         return page
 
 
@@ -176,5 +185,27 @@ def letters_parse_args(args: tuple | list) -> tuple[str | None, tuple | None, tu
     return first_arg, semesters, categories
 
 
-def watch_student_file():
-    pass
+def get_ues_to_watch(user: User) -> list[str]:
+    result = []
+    with requests.Session() as session:
+        user.init_session(session)
+        page = get_student_file(session)
+        ues = extract_letters_semester(page)
+        for category in list(ues.values())[0].values():
+            if len(category) > 0:
+                result += [ue for ue in category if len(ue) == 1]
+    return result
+
+
+def get_ues_changes(user: User, old_ues: list[str]) -> list[ue_t]:
+    new_ues = []
+    with requests.Session() as session:
+        user.init_session(session)
+        page = get_student_file(session)
+        ues = extract_letters_semester(page)
+        for category in list(ues.values())[0].values():
+            if len(category) > 0:
+                new_ues += [ue for ue in category if len(ue) > 1 and ue[0] in old_ues]
+    return new_ues
+
+

@@ -43,13 +43,14 @@ def extract_letters_category(page: list[Tag], semesters_list: list[str], categor
     return dossier_dict
 
 
-def extract_letters_semester(page: list[Tag], semesters_list = None, categories_list = None) -> ue_set:
+def extract_letters_semester(page: list[Tag] | response, semesters_list = None, categories_list = None) -> ue_set:
     """
     extract from the page a dict with all UEs.
     The keys are the semesters and each element is a dict associating UEs to their category
+    If semesters_list is None, only the last semester is extracted
     For example this can return: ::
         {'TC1': {
-            'CS': 'MATH01',
+            'CS': ['MATH01', 'A', '6'],
             'TM': 'TNEV'},
         'TC2': {
             'CS': 'MATH02',

@@ -1,11 +1,13 @@
 import sqlite3
+import typing
+from pathlib import Path
 
 from cryptography.fernet import Fernet
-from src.confidential import FERNET_KEY
-from src.website_interact.ent_requests import init_session
-from pathlib import Path
+
 from src.cache import put_in_cache, get_cache, _get_cache_wrapper, remove_cache
+from src.confidential import FERNET_KEY
 from src.custom_types import response
+from src.website_interact.ent_requests import init_session
 
 DB_PATH = Path(__file__).resolve().parent.parent / "users.sqlite"
 
@@ -27,9 +29,9 @@ class CacheError(Exception):
 
 class User:
     def __init__(self, discord_id: int, username: str = "", password: str = ""):
+        self.discord_id = discord_id
         self.__username = username
         self.__password = password
-        self.discord_id = discord_id
 
     def save(self) -> None:
         """
@@ -137,3 +139,17 @@ class User:
         res = remove_cache(self)
         if res is None:
             raise CacheError()
+
+    @classmethod
+    def get_all_users(cls) -> typing.Generator:
+        """
+        Get all the users from the database
+        :return: a list of User objects
+        """
+        db = sqlite3.connect(DB_PATH)
+        cur = db.cursor()
+        result = cur.execute("SELECT discordId FROM users")
+        for row in result:
+            yield User(row[0])
+        cur.close()
+        db.close()
